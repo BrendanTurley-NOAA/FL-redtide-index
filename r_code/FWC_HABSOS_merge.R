@@ -56,6 +56,7 @@ habs_overlap <- habs_merge[overlap,]
 ### should be one-to-one
 plot(habs_overlap$CELLCOUNT,habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
 habs_overlap$cell_diff <- (habs_overlap$CELLCOUNT-habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
+length(which(habs_overlap$cell_diff>0))/nrow(habs_overlap)
 hist(habs_overlap$cell_diff)
 plot(habs_overlap$LONGITUDE,habs_overlap$LATITUDE,asp=1,cex=log(abs(habs_overlap$cell_diff))/5)
 
