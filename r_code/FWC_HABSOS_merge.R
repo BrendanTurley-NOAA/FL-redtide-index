@@ -5,14 +5,14 @@ setwd('~/Desktop/professional/projects/Postdoc_FL/data/habs')
 # original data requested from https://habsos.noaa.gov/about
 habs1 <- read.csv('habsos_20220225.csv')
 habs1$date_utc <- dmy_hm(paste(substr(habs1$SAMPLE_DATE,1,15),substr(habs1$SAMPLE_DATE,30,31)))
-habs1 <- habs1[which(year(habs1$date_utc)<2023 & year(habs1$date_utc)>1997 & habs1$STATE_ID=='FL' ),]
+habs1 <- habs1[which(year(habs1$date_utc)<2021 & year(habs1$date_utc)>1997 & habs1$STATE_ID=='FL' ),]
 habs1$dataset <- 'HABSOS'
 
 # original data requested from https://myfwc.com/research/redtide/monitoring/database/
 habs2 <- read.csv('FL_Kbrevis_1953-2021.03.08.csv')
 names(habs2) <- toupper(names(habs2))
 habs2$date <- mdy(habs2$SAMPLE.DATE)
-habs2 <- habs2[which(year(habs2$date)<2023 & year(habs2$date)>1997),]
+habs2 <- habs2[which(year(habs2$date)<2021 & year(habs2$date)>1997),]
 table(habs2$TIME.ZONE,habs2$COUNTY)
 ### standardize timezones
 switch_data <- function(x){
@@ -38,31 +38,102 @@ timez[which(is.na(timez) & is.element(habs2$COUNTY,flco_cen))] <- 'America/Chica
 timez[which(is.na(timez) & !is.element(habs2$COUNTY,flco_cen))] <- 'America/New_York'
 # length(which(is.na(timez)))
 # table(timez)
-### missing times = noon for convenience
+### missing times zones = UTC; assumed
+time_missing <- which(nchar(habs2$TIME.ZONE)==0)
+habs2$TIME.ZONE[time_missing] <- 'UTC'
+timez[time_missing] <- 'UTC'
+### missing times = midnight for convenience
 time_missing <- which(nchar(habs2$SAMPLE.TIME)==0)
-habs2$SAMPLE.TIME[time_missing] <- '12:00'
+habs2$SAMPLE.TIME[time_missing] <- '00:00'
 times <- mdy_hm(paste(habs2$SAMPLE.DATE,habs2$SAMPLE.TIME)) ### assumes everything is UTC and won't accept timezone as a vector
 # tz(times)
-### apply local timezone, then conver to UTC
+### apply local timezone, then convert to UTC
 habs2$date_utc <- force_tzs(times,timez)
 habs2$dataset <- 'FWC'
 names(habs2)[grep('depth',names(habs2),ignore.case = T)] <- names(habs1)[grep('depth',names(habs1),ignore.case = T)]
 
 
+### merge the data on date, lat/lon, and depth
+### merge issue so far was due to decimal place reporting
+habs1$LATITUDE <- round(habs1$LATITUDE,5)
+habs1$LONGITUDE <- round(habs1$LONGITUDE,5)
+habs2$LATITUDE <- round(habs2$LATITUDE,5)
+habs2$LONGITUDE <- round(habs2$LONGITUDE,5)
 habs_merge <- merge(habs1,habs2,by=c('date_utc','LATITUDE','LONGITUDE','SAMPLE_DEPTH'),all=T)
+# habs_overlap <- merge(habs1,habs2,by=c('date_utc','LATITUDE','LONGITUDE','SAMPLE_DEPTH'),all=F)
 overlap <- which(!is.na(habs_merge$dataset.x) & !is.na(habs_merge$dataset.y))
 length(overlap)/nrow(habs_merge)
 habs_overlap <- habs_merge[overlap,]
 ### should be one-to-one
-plot(habs_overlap$CELLCOUNT,habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
+plot(habs_overlap$CELLCOUNT+1,habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.+1,log='xy')
 habs_overlap$cell_diff <- (habs_overlap$CELLCOUNT-habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
 length(which(habs_overlap$cell_diff>0))/nrow(habs_overlap)
 hist(habs_overlap$cell_diff)
 plot(habs_overlap$LONGITUDE,habs_overlap$LATITUDE,asp=1,cex=log(abs(habs_overlap$cell_diff))/5)
 
 habsos <- which(habs_merge$dataset.x=='HABSOS')
+habsos_r <- which(habs_merge$dataset.x=='HABSOS' & is.na(habs_merge$dataset.y))
 fwc <- which(habs_merge$dataset.y=='FWC')
+fwc_r <- which(habs_merge$dataset.y=='FWC' & is.na(habs_merge$dataset.x))
 
+length(overlap) + length(habsos_r) + length(fwc_r)
+
+#### investigating merge
+fwc_r_comp <- rep(NA,length(habsos_r))
+fwc_r_comp[1:length(fwc_r)] <- fwc_r
+comps <- data.frame(habsos=habsos_r,fwc=fwc_r_comp)
+
+plot(habsos_r,fwc_r_comp)
+plot(habsos_r-fwc_r_comp)
+
+rbind(habs_merge[habsos_r[1],],habs_merge[fwc_r[1],])
+
+habs_merge$LATITUDE[fwc_r[1]]==habs_merge$LATITUDE[habsos_r[1]]
+habs_merge$LATITUDE[fwc_r[1]]-habs_merge$LATITUDE[habsos_r[1]] #WTF
+habs_merge$LONGITUDE[fwc_r[1]]-habs_merge$LONGITUDE[habsos_r[1]] #WTF
+habs_merge$SAMPLE_DEPTH[fwc_r[1]]-habs_merge$SAMPLE_DEPTH[habsos_r[1]] 
+
+# library(dplyr)
+# habs_merge2 <- full_join(habs1,habs2,by=c('date_utc','LATITUDE','LONGITUDE','SAMPLE_DEPTH'))
+### same result
+
+
+### lots of overlap not merge because time of sampling not matching
+par(mfrow=c(1,2))
 plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
-points(habs_merge$LONGITUDE[habsos],habs_merge$LATITUDE[habsos],col='red',pch='.')
-points(habs_merge$LONGITUDE[fwc],habs_merge$LATITUDE[fwc],col='blue',pch='.')
+points(habs_merge$LONGITUDE[habsos_r],habs_merge$LATITUDE[habsos_r],col='red',pch=16,cex=.2)
+plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
+points(habs_merge$LONGITUDE[fwc_r],habs_merge$LATITUDE[fwc_r],col='green',pch=16,cex=.2)
+
+
+
+
+### merge the data on date, lat/lon, and depth
+### strip time off
+habs1$date_utc[1]
+habs1$date_ymd <- ymd(substr(habs1$date_utc,1,10))
+habs2$date_ymd <- ymd(substr(habs2$date_utc,1,10))
+habs_merge <- merge(habs1,habs2,by=c('date_ymd','LATITUDE','LONGITUDE','SAMPLE_DEPTH'),all=T)
+overlap <- which(!is.na(habs_merge$dataset.x) & !is.na(habs_merge$dataset.y))
+length(overlap)/nrow(habs_merge)
+habs_overlap <- habs_merge[overlap,]
+### should be one-to-one
+plot(habs_overlap$CELLCOUNT+1,habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.+1,log='xy')
+habs_overlap$cell_diff <- (habs_overlap$CELLCOUNT-habs_overlap$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
+length(which(habs_overlap$cell_diff>0))/nrow(habs_overlap)
+hist(habs_overlap$cell_diff)
+plot(habs_overlap$LONGITUDE,habs_overlap$LATITUDE,asp=1,cex=log(abs(habs_overlap$cell_diff))/5)
+
+habsos <- which(habs_merge$dataset.x=='HABSOS')
+habsos_r <- which(habs_merge$dataset.x=='HABSOS' & is.na(habs_merge$dataset.y))
+fwc <- which(habs_merge$dataset.y=='FWC')
+fwc_r <- which(habs_merge$dataset.y=='FWC' & is.na(habs_merge$dataset.x))
+
+length(overlap) + length(habsos_r) + length(fwc_r)
+
+### lots of overlap not merge because time of sampling not matching
+par(mfrow=c(1,2))
+plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
+points(habs_merge$LONGITUDE[habsos_r],habs_merge$LATITUDE[habsos_r],col='red',pch='.')
+plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
+points(habs_merge$LONGITUDE[fwc_r],habs_merge$LATITUDE[fwc_r],col='blue',pch='.')
