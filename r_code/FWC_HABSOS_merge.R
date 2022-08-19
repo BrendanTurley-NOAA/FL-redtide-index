@@ -195,3 +195,29 @@ plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
 points(habs_merge$LONGITUDE[habsos_r],habs_merge$LATITUDE[habsos_r],col='red',pch='.')
 plot(habs_merge$LONGITUDE[overlap],habs_merge$LATITUDE[overlap],asp=1)
 points(habs_merge$LONGITUDE[fwc_r],habs_merge$LATITUDE[fwc_r],col='blue',pch='.')
+
+
+
+### ECOHAB cruises
+ec_in <- grep('ecohab',habs2$COLLECTION.AGENCY,ignore.case = T)
+ecohab <- habs2[ec_in,]
+
+plot(ecohab$LONGITUDE,ecohab$LATITUDE,asp=1,col=year(ecohab$date_utc))
+plot(ecohab$date_utc,ecohab$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
+
+table(year(ecohab$date_utc),month(ecohab$date_utc))
+
+cuts <- cut(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
+
+yrs <- sort(unique(year(ecohab$date_utc)))
+for(i in yrs){
+  tmp <- ecohab[which(year(ecohab$date_utc)==i),]
+  tmp <- tmp[order(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,decreasing = F),]
+  cuts <- cut(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
+  plot(ecohab$LONGITUDE,ecohab$LATITUDE,asp=1,col='white')
+  points(tmp$LONGITUDE,tmp$LATITUDE,asp=1,pch=21,
+         # bg=alpha('red',log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)/max(log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.))))
+  bg=alpha(c('gray50','white','gold','orange2','red3')[cuts],.7))
+  
+  mtext(i)
+}
