@@ -1,4 +1,5 @@
 library(lubridate)
+library(maps)
 library(scales)
 
 setwd('~/Desktop/professional/projects/Postdoc_FL/data/habs')
@@ -203,11 +204,11 @@ ec_in <- grep('ecohab',habs2$COLLECTION.AGENCY,ignore.case = T)
 ecohab <- habs2[ec_in,]
 
 plot(ecohab$LONGITUDE,ecohab$LATITUDE,asp=1,col=year(ecohab$date_utc))
-plot(ecohab$date_utc,ecohab$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)
+plot(ecohab$date_utc,ecohab$KARENIA.BREVIS.ABUNDANCE..CELLS.L.+1,log='y')
 
 table(year(ecohab$date_utc),month(ecohab$date_utc))
 
-cuts <- cut(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
+cuts <- cut(ecohab$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
 
 yrs <- sort(unique(year(ecohab$date_utc)))
 for(i in yrs){
@@ -218,6 +219,36 @@ for(i in yrs){
   points(tmp$LONGITUDE,tmp$LATITUDE,asp=1,pch=21,
          # bg=alpha('red',log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)/max(log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.))))
   bg=alpha(c('gray50','white','gold','orange2','red3')[cuts],.7))
-  
   mtext(i)
 }
+
+par(mfrow=c(3,4))
+yr_mth <- expand.grid(1:12,yrs)
+for(i in 1:nrow(yr_mth)){
+  tmp <- ecohab[which(year(ecohab$date_utc)==yr_mth[i,2] &
+                        month(ecohab$date_utc)==yr_mth[i,1]),]
+  tmp <- tmp[order(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,decreasing = F),]
+  cuts <- cut(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
+  plot(ecohab$LONGITUDE,ecohab$LATITUDE,asp=1,col='white')
+  map('usa',add=T)
+  points(tmp$LONGITUDE,tmp$LATITUDE,asp=1,pch=21,
+         # bg=alpha('red',log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)/max(log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.))))
+         bg=alpha(c('gray50','white','gold','orange2','red3')[cuts],.7))
+  mtext(paste(yr_mth[i,2],month.abb[yr_mth[i,1]],sep='-'))
+}
+
+
+par(mfrow=c(1,1))
+i=45
+tmp <- ecohab[which(year(ecohab$date_utc)==yr_mth[i,2] &
+                      month(ecohab$date_utc)==yr_mth[i,1]),]
+tmp <- tmp[order(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,decreasing = F),]
+cuts <- cut(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.,breaks=c(0,1e3,1e4,1e5,1e6,1e10))
+plot(ecohab$LONGITUDE,ecohab$LATITUDE,asp=1,col='white')
+map('usa',add=T)
+points(tmp$LONGITUDE,tmp$LATITUDE,asp=1,pch=21,
+       # bg=alpha('red',log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.)/max(log(tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.))))
+       bg=alpha(c('gray50','white','gold','orange2','red3')[cuts],.7))
+mtext(paste(yr_mth[i,2],month.abb[yr_mth[i,1]],sep='-'))
+
+plot(tmp$date_utc,tmp$KARENIA.BREVIS.ABUNDANCE..CELLS.L.+1,log='y',col=as.factor(tmp$COLLECTION.AGENCY))
