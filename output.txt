@@ -1,0 +1,80 @@
+2022-11-07 14:21:28 Processing 2003
+2022-11-07 15:17:03 Processed 2003 total time (sec): 3333.963
+2022-11-07 15:17:14 Processing 2004
+2022-11-07 16:11:39 Processed 2004 total time (sec): 3263.885
+2022-11-07 16:11:50 Processing 2005
+2022-11-07 17:05:37 Processed 2005 total time (sec): 3226.831
+2022-11-07 17:05:48 Processing 2006
+2022-11-07 17:59:22 Processed 2006 total time (sec): 3213.001
+2022-11-07 17:59:33 Processing 2007
+2022-11-07 18:53:49 Processed 2007 total time (sec): 3254.661
+2022-11-07 18:54:00 Processing 2008
+2022-11-07 19:57:25 Processed 2008 total time (sec): 3805.418
+2022-11-07 19:57:37 Processing 2009
+2022-11-07 20:52:51 Processed 2009 total time (sec): 3313.954
+2022-11-07 20:53:02 Processing 2010
+2022-11-07 21:46:52 Processed 2010 total time (sec): 3229.476
+2022-11-07 21:47:03 Processing 2011
+2022-11-07 22:41:09 Processed 2011 total time (sec): 3244.60400000001
+2022-11-07 22:41:21 Processing 2012
+2022-11-07 23:34:51 Processed 2012 total time (sec): 3209.938
+2022-11-07 23:35:03 Processing 2013
+2022-11-08 00:28:08 Processed 2013 total time (sec): 3185.389
+2022-11-08 00:28:19 Processing 2014
+2022-11-08 01:20:54 Processed 2014 total time (sec): 3154.342
+2022-11-08 01:21:05 Processing 2015
+2022-11-08 02:14:08 Processed 2015 total time (sec): 3182.592
+2022-11-08 02:14:19 Processing 2016
+2022-11-08 Error Stopped at 3165 secs; DAP server error (i=364; j=9); url: http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2016/364/A2016364.L3m_DAY_RRS_Rrs_678_4km.nc; 2016 jday 364 Rrs_678  is only error 2003-2016
+2022-11-08 Completed 2016; day 365-366; all parameters
+2022-11-08 Total time: 42618.054 sec (2003-2015)
+2022-11-08 15:26:27 Processing 2017
+2022-11-08 16:21:43 Processed 2017 total time (sec): 3314.746
+2022-11-08 16:21:55 Processing 2018
+2022-11-08 17:15:51 Processed 2018 total time (sec): 3236.277
+2022-11-08 17:16:03 Processing 2019
+2022-11-08 21:15:01 Processed 2019 total time (sec): 14337.795
+2022-11-08 21:15:12 Processing 2020
+2022-11-08 22:10:20 Processed 2020 total time (sec): 3307.289
+2022-11-08 Total time: 24196.107 sec (2017-2020)
+2022-11-10 13:14:28 Processing MUR SST 2003
+2022-11-10 13:26:20 Processed MUR SST 2003 total time (sec): 711.411
+2022-11-10 13:26:24 Processing MUR SST 2004
+2022-11-10 13:38:51 Processed MUR SST 2004 total time (sec): 746.579
+2022-11-10 13:38:56 Processing MUR SST 2005
+2022-11-10 13:51:26 Processed MUR SST 2005 total time (sec): 749.657999999999
+2022-11-10 13:51:30 Processing MUR SST 2006
+2022-11-10 14:03:32 Processed MUR SST 2006 total time (sec): 721.451000000001
+2022-11-10 14:03:37 Processing MUR SST 2007
+2022-11-10 14:16:01 Processed MUR SST 2007 total time (sec): 743.572
+2022-11-10 14:16:05 Processing MUR SST 2008
+2022-11-10 14:28:15 Processed MUR SST 2008 total time (sec): 729.521999999999
+2022-11-10 14:28:19 Processing MUR SST 2009
+2022-11-10 14:40:36 Processed MUR SST 2009 total time (sec): 736.088
+2022-11-10 14:40:41 Processing MUR SST 2010
+2022-11-10 14:52:45 Processed MUR SST 2010 total time (sec): 724.041000000001
+2022-11-10 14:52:49 Processing MUR SST 2011
+2022-11-10 15:05:17 Processed MUR SST 2011 total time (sec): 746.853999999999
+2022-11-10 15:05:21 Processing MUR SST 2012
+2022-11-10 15:17:54 Processed MUR SST 2012 total time (sec): 751.817999999999
+2022-11-10 15:17:58 Processing MUR SST 2013
+2022-11-10 15:30:08 Processed MUR SST 2013 total time (sec): 729.478999999999
+2022-11-10 15:30:13 Processing MUR SST 2014
+2022-11-10 15:44:44 Processed MUR SST 2014 total time (sec): 870.718000000001
+2022-11-10 15:44:50 Processing MUR SST 2015
+2022-11-10 16:00:24 Processed MUR SST 2015 total time (sec): 932.414000000001
+2022-11-10 16:00:29 Processing MUR SST 2016
+2022-11-10 16:12:51 Processed MUR SST 2016 total time (sec): 741.827999999998
+2022-11-10 16:12:55 Processing MUR SST 2017
+2022-11-10 16:25:00 Processed MUR SST 2017 total time (sec): 723.436000000002
+2022-11-10 16:25:04 Processing MUR SST 2018
+2022-11-10 16:36:58 Processed MUR SST 2018 total time (sec): 714.156999999999
+2022-11-10 16:37:03 Processing MUR SST 2019
+2022-11-10 16:48:37 Processed MUR SST 2019 total time (sec): 693.689999999999
+2022-11-10 16:48:41 Processing MUR SST 2020
+2022-11-10 17:00:39 Processed MUR SST 2020 total time (sec): 716.587
+2022-11-10 17:00:43 Processing MUR SST 2021
+2022-11-10 17:02:24 Error MUR SST (i = 51) https://opendap.jpl.nasa.gov/opendap/OceanTemperature/ghrsst/data/GDS2/L4/GLOB/JPL/MUR/v4.1/2021/051/20210220090000-JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1.nc
+2022-11-10 17:02:24 Error MUR SST (i = 52) https://opendap.jpl.nasa.gov/opendap/OceanTemperature/ghrsst/data/GDS2/L4/GLOB/JPL/MUR/v4.1/2021/052/20210221090000-JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1.nc
+2022-11-10 17:13:01 Processed MUR SST 2021 total time (sec): 736.822
+Total time: 14220.125 sec (2002-2021)
