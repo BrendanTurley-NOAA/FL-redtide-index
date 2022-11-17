@@ -182,4 +182,3 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
 }
 cat('total time:',sum(times1,na.rm=T), 'sec')
 # write(paste('Total time:',sum(times1,na.rm=T), 'sec (2017-2020)'),'output.txt',append=T)
-
