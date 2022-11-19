@@ -78,3 +78,5 @@
 2022-11-10 17:02:24 Error MUR SST (i = 52) https://opendap.jpl.nasa.gov/opendap/OceanTemperature/ghrsst/data/GDS2/L4/GLOB/JPL/MUR/v4.1/2021/052/20210221090000-JPL-L4_GHRSST-SSTfnd-MUR-GLOB-v02.0-fv04.1.nc
 2022-11-10 17:13:01 Processed MUR SST 2021 total time (sec): 736.822
 Total time: 14220.125 sec (2002-2021)
+2022-11-18 17:34:24 Processing 2002
+2022-11-18 17:41:27 Processed 2002 total time (sec): 422.988

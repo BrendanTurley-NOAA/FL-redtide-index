@@ -72,6 +72,7 @@ lat_count <- length(lat_start:lat_stop)
 lon2 <- ncvar_get(modis1, 'lon',start=lon_start,count=lon_count)
 lat2 <- ncvar_get(modis1, 'lat',start=lat_start,count=lat_count)
 
+setwd('~/Documents/nasa/data/lowres_4km')
 times1 <- rep(NA,length(2002:2021))
 for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
   print(paste('Processing',yr, '...',Sys.time()))
@@ -159,7 +160,7 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
     }
   )
   write(paste(Sys.time(), 'Processed', yr, 'total time (sec):',t1[3]),'output.txt',append=T)
-  times1[yr-2002] <- t1[3]
+  times1[yr-2001] <- t1[3]
   # "2022-11-04 11:26:35 CDT"
   # user   system  elapsed 
   # 134.101   48.079 4389.390 
@@ -177,7 +178,6 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
   ncatt_put(modis_tmp,0,"last_Modified",paste0(with_tz(Sys.time(),tz='utc'),'Z'))
   nc_close(modis_tmp)
   
-  setwd('~/Documents/nasa/data/lowres_4km')
   saveRDS(data_yday,paste0('aqua_modis_daily_',yr,'_4km.rds')) # netcdf is smaller and contains metadata
   # data_yday <- readRDS('modisa_daily_2021.rds')
 }
