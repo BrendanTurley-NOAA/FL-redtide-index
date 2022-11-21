@@ -1,15 +1,35 @@
-
 library(fields)
 library(lubridate)
+library(ncdf4)
 
+
+setwd('~/Documents/nasa/data/lowres_4km')
 parms <- c('CHL_chlor_a','FLH_nflh','RRS_Rrs_443','RRS_Rrs_488','RRS_Rrs_531','RRS_Rrs_547','RRS_Rrs_555','RRS_Rrs_667','RRS_Rrs_678')
 
-yr <- 2005
-data <- readRDS(paste0('modisa_daily_',yr,'.rds'))
+yr <- 2003
+data <- readRDS(paste0('aqua_modis_daily_',yr,'_4km.rds'))
+modis <- nc_open(paste0('modisa_daily_',yr,'.nc'))
+for(i in 1:9){
+  data2 <- ncvar_get(modis,paste(substr(parms[i],5,20)))
+  scale_factor <- ncatt_get(modis,paste(substr(parms[i],5,20)),'scale_factor')$value
+  add_offset <- ncatt_get(modis,paste(substr(parms[i],5,20)),'add_offset')$value
+  imagePlot(apply(data[i,,,],c(1,2),mean,na.rm=T))
+  imagePlot((apply(data2,c(1,2),mean,na.rm=T)-add_offset)/scale_factor)
+  image(apply(data[i,,,],c(1,2),mean,na.rm=T)-((apply(data2,c(1,2),mean,na.rm=T)-add_offset)/scale_factor))
+  print(identical(data[i,,,],data2))
+  test <- (data2-add_offset)/scale_factor
+  print(identical(data[i,,,],test))
+}
+
+# data2 <- readRDS(paste0('modisa_daily_',yr,'.rds'))
+# identical(data,data2) # should not be idenitcal due to reprocessing
 for(i in 1:9){
   dates <- seq(as.Date(paste0(yr,'-01-01')),as.Date(paste0(yr,'-12-31')),by='day')
   tmp <- log10(apply(data[i,,,],c(1,2),mean,na.rm=T))
   tmp2 <- log10(apply(data[i,,,],c(1,2),sd,na.rm=T))
+  if(length(which(tmp2==-Inf))>0){
+    tmp2[tmp2==-Inf] <- NA
+  }
   tm <- aggregate(apply(data[i,,,],3,mean,na.rm=T),by=list(month(dates)),mean,na.rm=T)
   tsd <- aggregate(apply(data[i,,,],3,sd,na.rm=T),by=list(month(dates)),sd,na.rm=T)
   # tmp <- apply(data[i,,,],c(1,2),quantile,.9,na.rm=T)
@@ -26,6 +46,9 @@ x <- aggregate(apply(data[i,,,],3,function(x) length(which(!is.na(x)))),by=list(
 par(mfrow=c(1,2))
 imagePlot(tmp3[,ncol(tmp3):1],asp=1,col=rocket(60),nlevel=59)
 barplot(x$x,names.arg = month.abb[1:12],las=2)
+
+
+### sst
 
 sst_brks <- seq(22,29,.2)
 cols <- plasma(length(sst_brks)-1)
