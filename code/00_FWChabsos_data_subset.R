@@ -37,4 +37,5 @@ plot(habs$LONGITUDE,habs$LATITUDE,asp=1)
 plot(habs$date,habs$CELLCOUNT)
 plot(habs$date,habs$CELLCOUNT+1,log='y')
 
-write.csv(habs,'habsos_subset_FL03-21.csv',quote=F,row.names=F)
+habs <- habs[order(habs$date),]
+write.csv(habs,'habsos_subset_FL03-21.csv',quote=T,row.names=F)

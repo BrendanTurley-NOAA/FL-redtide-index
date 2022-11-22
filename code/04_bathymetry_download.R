@@ -4,6 +4,22 @@ library(ncdf4)
 library(ncdf4.helpers)
 library(NISTunits)
 
+lonlat_ind <- function(lonlat,left,right){
+  ind <- which(lonlat>=left & lonlat<=right)
+  out <- lonlat[ind]
+  
+  if(out[1]>left){
+    ind <- c((ind[1]-1),ind)
+    out <- lonlat[ind]
+  }
+  
+  if(out[length(ind)]<right){
+    ind <- c(ind,(ind[length(out)]+1))
+    out <- lonlat[ind]
+  }
+  return(list(data=out,indices=ind))
+}
+
 vec_brk <- function(input) {
   core <- (diff(input)/2) + input[1:(length(input)-1)]
   beg <- input[1] - (diff(input[1:2])/2)
@@ -29,18 +45,25 @@ url <- 'http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2011/0102/AQUA_M
 # url <- 'http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2011/002/A2011002.L3m_DAY_RRS_Rrs_443_4km.nc'
 # system.time(modis1 <- nc_open(url,readunlim=T,suppress_dimvals=F,return_on_error=T))
 system.time(modis1 <- nc_open(url,readunlim=F,suppress_dimvals=T,return_on_error=T))
-atts <- ncatt_get(modis1,0)
-# names(atts)[-c(1,6,8,9,11:14,18:26,29:34,36:44,46:48,51,53,55,57:64)]
+# atts <- ncatt_get(modis1,0)
+# # names(atts)[-c(1,6,8,9,11:14,18:26,29:34,36:44,46:48,51,53,55,57:64)]
+# lon <- ncvar_get(modis1, 'lon')
+# lon_start <- which(lon>lonbox_w)[1]-1
+# lon_stop <- which(lon>lonbox_e)[1]
+# lon_count <- length(lon_start:lon_stop)
+# lat <- ncvar_get(modis1, 'lat')
+# lat_start <- which(lat<latbox_n)[1]-1
+# lat_stop <- which(lat<latbox_s)[1]
+# lat_count <- length(lat_start:lat_stop)
+# lon_modis <- ncvar_get(modis1, 'lon',start=lon_start,count=lon_count)
+# lat_modis <- ncvar_get(modis1, 'lat',start=lat_start,count=lat_count)
 lon <- ncvar_get(modis1, 'lon')
-lon_start <- which(lon>lonbox_w)[1]-1
-lon_stop <- which(lon>lonbox_e)[1]
-lon_count <- length(lon_start:lon_stop)
-lat <- ncvar_get(modis1, 'lat')
-lat_start <- which(lat<latbox_n)[1]-1
-lat_stop <- which(lat<latbox_s)[1]
-lat_count <- length(lat_start:lat_stop)
-lon_modis <- ncvar_get(modis1, 'lon',start=lon_start,count=lon_count)
-lat_modis <- ncvar_get(modis1, 'lat',start=lat_start,count=lat_count)
+lons <- lonlat_ind(lon,lonbox_w,lonbox_e)
+lon_modis <- lons$data
+lat <- ncvar_get(modis1,'lat')
+lats <- lonlat_ind(lat,latbox_s,latbox_n)
+lat_modis <- lats$data
+
 
 ### bathymetry
 # url <- 'https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc'
@@ -48,11 +71,17 @@ lat_modis <- ncvar_get(modis1, 'lat',start=lat_start,count=lat_count)
 url <- 'https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/30s/30s_bed_elev_netcdf/ETOPO_2022_v1_30s_N90W180_bed.nc'
 data <- nc_open(url)
 lon <- ncvar_get(data,'lon')
-lon_ind <- which(lon>=lonbox_w & lon<=lonbox_e)
-lon_bathy <- lon[lon_ind]
+lons <- lonlat_ind(lon,lonbox_w,lonbox_e)
+lon_ind <- lons$indices
+lon_bathy <- lons$data
+# lon_ind <- which(lon>=lonbox_w & lon<=lonbox_e)
+# lon_bathy <- lon[lon_ind]
 lat <- ncvar_get(data,'lat')
-lat_ind <- which(lat>=latbox_s & lat<=latbox_n)
-lat_bathy <- lat[lat_ind]
+lats <- lonlat_ind(lat,latbox_s,latbox_n)
+lat_ind <- lats$indices
+lat_bathy <- lats$data
+# lat_ind <- which(lat>=latbox_s & lat<=latbox_n)
+# lat_bathy <- lat[lat_ind]
 lon_start <- lon_ind[1]
 lon_count <- length(lon_ind)
 lat_start <- lat_ind[1]
