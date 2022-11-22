@@ -1,5 +1,6 @@
 ### modis derived products and netcdf creation
 
+library(abind)
 library(fields)
 library(lubridate)
 library(ncdf4)
@@ -28,15 +29,6 @@ latbox_n <- 30.7 ### northern coast
 lonbox_e <- -81 ### Florida Bay
 latbox_s <- 24.2 ### southern edge of Key West
 
-
-## red band difference
-### Ruhul Amin, Jing Zhou, Alex Gilerson, Barry Gross, Fred Moshary, and Samir Ahmed, "Novel optical techniques for detecting and classifying toxic dinoflagellate Karenia brevis blooms using satellite imagery," Opt. Express 17, 9126-9144 (2009)
-# nLw678 - nLw667
-# (nLw678 - nLw667)/(nLw678 + nLw667)
-
-### Karenia brevis bloom index (KBBI)
-
-
 # Rrs = nLw/F0
 # Rrs: sr^-1; nLw: mW cm^-2 um^-1 sr^-1; F0: mW cm^-2 um^-1
 sat_wavelength <- c(412,443,469,488,531,547,551,555,645,667,678,748,859,869,1240,1640,2130)
@@ -45,9 +37,10 @@ F0 <- c(172.912,187.622,205.878,194.933,185.747,186.539,186.539,183.869,157.811,
 parms <- c('CHL_chlor_a','FLH_nflh','RRS_Rrs_443','RRS_Rrs_488','RRS_Rrs_531','RRS_Rrs_547','RRS_Rrs_555','RRS_Rrs_667','RRS_Rrs_678')
 parm <- substr(parms,5,11)
 
-url <- 'http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2011/002/A2011002.L3m_DAY_RRS_Rrs_443_4km.nc'
+# url <- 'http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2011/002/A2011002.L3m_DAY_RRS_Rrs_443_4km.nc'
+url <- 'http://oceandata.sci.gsfc.nasa.gov/opendap/MODISA/L3SMI/2011/0102/AQUA_MODIS.20110102.L3m.DAY.RRS.Rrs_443.4km.nc'
 system.time(modis1 <- nc_open(url,readunlim=F,suppress_dimvals=T,return_on_error=T))
-atts <- ncatt_get(modis1,0)
+# atts <- ncatt_get(modis1,0)
 # names(atts)[-c(1,6,8,9,11:14,18:26,29:34,36:44,46:48,51,53,55,57:64)]
 lon <- ncvar_get(modis1, 'lon')
 lon_start <- which(lon>lonbox_w)[1]-1
@@ -59,77 +52,144 @@ lat_stop <- which(lat<latbox_s)[1]
 lat_count <- length(lat_start:lat_stop)
 lon2 <- ncvar_get(modis1, 'lon',start=lon_start,count=lon_count)
 lat2 <- ncvar_get(modis1, 'lat',start=lat_start,count=lat_count)
+nc_close(modis1)
+rm(modis1)
 
 
 setwd('~/Documents/nasa/data/lowres_4km')
-yr <- 2003
-data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
-
-# nlw_443
-nlw_443 <- rrs_nlw(data_yday, 443)
-
-# nlw_488
-nlw_488 <- rrs_nlw(data_yday, 488)
-
-# nlw_531
-nlw_531 <- rrs_nlw(data_yday, 531)
-
-# nlw_667
-nlw_667 <- rrs_nlw(data_yday, 667)
-
-# nlw_678
-nlw_678 <- rrs_nlw(data_yday, 678)
-
-# ssnlw488 - nlw_443, nlw_488, nlw_531
-ssnlw488 <- nlw_488 - nlw_443 - (nlw_531 - nlw_443) * (488 - 443) / (531 - 443)
-
-# RBD - nlw_667, nlw_678
-rbd <- nlw_678 - nlw_667
-
-# KBBI - nlw_667, nlw_678
-kbbi <- rbd / (nlw_678 + nlw_667)
-
-# ABI - nflh, rrs_547
-# nflh / (1 + (rrs_547 - 0.0015) * 80)
-abi <- data_yday[grep('nflh', parm),,,] / (1 + (data_yday[grep(547, parm),,,] - 0.0015) * 80)
-
-# bbp_Morel - chlor_a
-# (.3 * pow(chlor_a, .62) * (.002 + .02 * (.5 - .25 * log10(chlor_a))))
-bbp_morel <- .3 * (data_yday[grep('chlor_a', parm),,,]^.62) * (.002 + .02 * (.5 - .25 * log10(data_yday[grep('chlor_a', parm),,,])))
-
-# bbp_Carder - rrs_555
-# (2.058 * Rrs_555 - .00182)
-bbp_Carder <- 2.058 * data_yday[grep('555', parm),,,] - .00182
-
-# chlor_a anomaly
-chl_yday <- data_yday[grep('chlor_a', parm),,,]
-chl_anom <- array(NA,c(length(lon2),length(lat2),length(75:365)))
-for(i in 1:length(lon2)){
-  for(j in 1:length(lat2)){
-    n <- 1
-    for(k in 75:365){
-      ### 15 day lagged anomaly of 60 day mean
-      lm_60d <- mean(chl_yday[i,j,(k-74):(k-74+59)],na.rm=T)
-      chl_anom[i,j,n] <- chl_yday[i,j,k] - lm_60d
-      n <- n + 1
+# yr <- 2003
+pb <- txtProgressBar(min = 0, max = length(2003:2021), style = 3)
+t1 <- system.time(
+  for(yr in 2003:2021){
+    # data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
+    data_yday <- readRDS(paste0('aqua_modis_daily_',yr,'_4km.rds'))
+    data_out <- array(NA,c(11,
+                           length(lon2),
+                           length(lat2),
+                           dim(data_yday)[4]))
+    if(yr>2002){
+      data_previous <- readRDS(paste0('aqua_modis_daily_',(yr-1),'_4km.rds'))
+      begin <- dim(data_previous)[4]-74
+      last <- dim(data_previous)[4]
+      data_previous <- data_previous[1:2,,,begin:last]
     }
+    
+    # nlw_443
+    nlw_443 <- rrs_nlw(data_yday, 443)
+    
+    # nlw_488
+    nlw_488 <- rrs_nlw(data_yday, 488)
+    
+    # nlw_531
+    nlw_531 <- rrs_nlw(data_yday, 531)
+    
+    # nlw_667
+    nlw_667 <- rrs_nlw(data_yday, 667)
+    
+    # nlw_678
+    nlw_678 <- rrs_nlw(data_yday, 678)
+    
+    # ssnlw488 - nlw_443, nlw_488, nlw_531
+    ssnlw488 <- nlw_488 - nlw_443 - (nlw_531 - nlw_443) * (488 - 443) / (531 - 443)
+    
+    # RBD - nlw_667, nlw_678
+    rbd <- nlw_678 - nlw_667
+    
+    # KBBI - nlw_667, nlw_678
+    kbbi <- rbd / (nlw_678 + nlw_667)
+    
+    # ABI - nflh, rrs_547
+    # nflh / (1 + (rrs_547 - 0.0015) * 80)
+    abi <- data_yday[grep('nflh', parm),,,] / (1 + (data_yday[grep(547, parm),,,] - 0.0015) * 80)
+    
+    # bbp_Morel - chlor_a
+    # (.3 * pow(chlor_a, .62) * (.002 + .02 * (.5 - .25 * log10(chlor_a))))
+    bbp_morel <- .3 * (data_yday[grep('chlor_a', parm),,,]^.62) * (.002 + .02 * (.5 - .25 * log10(data_yday[grep('chlor_a', parm),,,])))
+    
+    # bbp_Carder - rrs_555
+    # (2.058 * Rrs_555 - .00182)
+    bbp_carder <- 2.058 * data_yday[grep('555', parm),,,] - .00182
+    
+    # chlor_a anomaly
+    chl_yday <- data_yday[grep('chlor_a', parm),,,]
+    chl_yday <- abind(chl_yday,data_previous[1,,,],along=3)
+    chl_anom2 <- array(NA,c(length(lon2),length(lat2),dim(data_yday)[4]))
+    n <- 1
+    for(k in 76:dim(chl_yday)[3]){
+      ### 15 day lagged anomaly of 60 day mean
+      lm_60d <- apply(chl_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
+      chl_anom2[,,n] <- chl_yday[,,k] - lm_60d
+      n <- n + 1
+      rm(lm_60d)
+    }
+    
+    # nflh anomaly
+    nflh_yday <- data_yday[grep('nflh', parm),,,]
+    nflh_yday <- abind(nflh_yday,data_previous[1,,,],along=3)
+    nflh_anom2 <- array(NA,c(length(lon2),length(lat2),dim(data_yday)[4]))
+    n <- 1
+    for(k in 76:dim(nflh_yday)[3]){
+      ### 15 day lagged anomaly of 60 day mean
+      lm_60d <- apply(nflh_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
+      nflh_anom2[,,n] <- nflh_yday[,,k] - lm_60d
+      n <- n + 1
+      rm(lm_60d)
+    }
+    
+    data_out[1,,,] <- data_yday[grep('chlor_a', parm),,,]
+    data_out[2,,,] <- chl_anom2
+    data_out[3,,,] <- data_yday[grep('nflh', parm),,,]
+    data_out[4,,,] <- nflh_anom2
+    data_out[5,,,] <- data_yday[grep('Rrs_667', parm),,,]
+    data_out[6,,,] <- abi
+    data_out[7,,,] <- bbp_carder
+    data_out[8,,,] <- bbp_morel
+    data_out[9,,,] <- ssnlw488
+    data_out[10,,,] <- rbd
+    data_out[11,,,] <- kbbi
+    
+    saveRDS(data_out,paste0('aqua_modis_daily_input_',yr,'_4km.rds')) # netcdf is smaller and contains metadata 
+    rm(data_yday,data_previous,begin,last,data_out,chl_anom2,chl_yday,nflh_anom2,nflh_yday,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,nlw_443,nlw_488,nlw_531,nlw_667,nlw_678)
+    # gc()
+    setTxtProgressBar(pb, yr-2002)
   }
-}
+)
+t1
 
-dim(chl_yday[1,,])
+### what are the output variables of interest?
+# chlor_a
+# chl_anom
+# nflh
+# nflh_anom
+# rrs_667
+# ABI
+# bbp_Morel
+# bbp_Carder
+# ssnlw488
+# RBD
+# KBBI
+
+parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi')
 
 
-# chlor_a anomaly
-chl_yday <- data_yday[grep('chlor_a', parm),,,]
-chl_anom2 <- array(NA,c(length(lon2),length(lat2),length(75:365)))
-n <- 1
-for(k in 75:365){
-  ### 15 day lagged anomaly of 60 day mean
-  lm_60d <- apply(chl_yday[,,(k-74):(k-74+59)],c(1,2),mean,na.rm=T)
-  chl_anom2[,,n] <- chl_yday[,,k] - lm_60d
-  n <- n + 1
-}
+### Carder to Morel ratio
 
-identical(chl_anom,chl_anom2)
+pb <- txtProgressBar(min = 0, max = length(2003:2021), style = 3)
+t1 <- system.time(
+  for(yr in 2003:2021){
+    setwd('~/Documents/nasa/data/lowres_4km')
+    # data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
+    data_yday <- readRDS(paste0('aqua_modis_daily_input_',yr,'_4km.rds'))
+    
+    cm_bbp <- data_yday[grep('carder',parm_out),,,]/data_yday[grep('morel',parm_out),,,]
+    
+    new_data <- abind(data_yday,cm_bbp,along=1)
+    setwd('~/Documents/nasa/data')
+    saveRDS(new_data,paste0('aqua_modis_daily_input_',yr,'_4km.rds')) # netcdf is smaller and contains metadata
+    
+    setTxtProgressBar(pb, yr-2002)
+    rm(data_yday,cm_bbp,new_data)
+  }
+)
 
-
+parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi','cm_bbp')

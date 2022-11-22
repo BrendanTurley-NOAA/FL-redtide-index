@@ -79,8 +79,8 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
   write(paste(Sys.time(), 'Processing',yr),'output.txt',append=T)
   ### reference date and julian days
   # yr <- 2021 # 2002:2021
-  mth <- ifelse(yr==2002,11,01)
-  dd <- ifelse(yr==2002,2,01)
+  mth <- ifelse(yr==2002,9,01)
+  dd <- ifelse(yr==2002,1,01)
   dates <- data.frame(date=ymd(seq(as.Date(paste0(yr,'-',sprintf("%02d",mth),'-',sprintf("%02d",dd))),as.Date(paste0(yr,'-12-31')),'day')),
                       yday=yday(ymd(seq(as.Date(paste0(yr,'-',sprintf("%02d",mth),'-',sprintf("%02d",dd))),as.Date(paste0(yr,'-12-31')),'day'))))
   # ## create netcdf file
@@ -152,7 +152,7 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
           nc_close(modis)
           data_yday[j,,,i] <- data
         } else {
-          write(paste0(Sys.time(), ' Error (i = ',i,', j = ',j,') ', url),'output.txt',append=T)
+          # write(paste0(Sys.time(), ' Error (i = ',i,', j = ',j,') ', url),'output.txt',append=T)
         }
         rm(modis,data,url)
       }
