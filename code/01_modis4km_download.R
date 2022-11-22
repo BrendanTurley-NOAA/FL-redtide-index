@@ -80,7 +80,7 @@ for(yr in 2002:2021){ # 2022-11-08; 2003-2016,2021 completed
   ### reference date and julian days
   # yr <- 2021 # 2002:2021
   mth <- ifelse(yr==2002,11,01)
-  dd <- ifelse(yr==2002,15,01)
+  dd <- ifelse(yr==2002,2,01)
   dates <- data.frame(date=ymd(seq(as.Date(paste0(yr,'-',sprintf("%02d",mth),'-',sprintf("%02d",dd))),as.Date(paste0(yr,'-12-31')),'day')),
                       yday=yday(ymd(seq(as.Date(paste0(yr,'-',sprintf("%02d",mth),'-',sprintf("%02d",dd))),as.Date(paste0(yr,'-12-31')),'day'))))
   ## create netcdf file
