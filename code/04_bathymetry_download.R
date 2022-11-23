@@ -66,8 +66,8 @@ lat_modis <- lats$data
 
 
 ### bathymetry
-# url <- 'https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/60s/60s_bed_elev_netcdf/ETOPO_2022_v1_60s_N90W180_bed.nc'
-## higher resolution
+### NOAA ETOPO 2022; https://www.ncei.noaa.gov/products/etopo-global-relief-model
+## 30-arc seconds ~1km^2
 url <- 'https://www.ngdc.noaa.gov/thredds/dodsC/global/ETOPO2022/30s/30s_bed_elev_netcdf/ETOPO_2022_v1_30s_N90W180_bed.nc'
 data <- nc_open(url)
 lon <- ncvar_get(data,'lon')
@@ -94,13 +94,16 @@ lonlat_modis <- expand.grid(lon=levels(lon_c),lat=levels(lat_c))
 bathy_orig <- ncvar_get(data,'z',
                    start=c(lon_start,lat_start),
                    count=c(lon_count,lat_count))
-bathy_orig[which(bathy_orig>=0)] <- NA
-bathy_orig <- (-bathy_orig)
-imagePlot(log10(bathy_orig),asp=1,col=rev(viridis(60)),nlevel=59)
+# bathy_orig[which(bathy_orig>=0)] <- NA
+# bathy_orig <- (-bathy_orig)
+hist(bathy_orig)
+imagePlot((bathy_orig),asp=1,col=rev(viridis(60)),nlevel=59)
+# imagePlot(log10(bathy_orig),asp=1,col=rev(viridis(60)),nlevel=59)
 
 bathy_agg <- aggregate(as.vector(bathy_orig),by=list(lon=lon_c,lat=lat_c),mean,na.rm=T)
 bathy_agg <- merge(lonlat_modis,bathy_agg,by=c('lon','lat'),all=T)
 bathy_agg_modis <- t(matrix(bathy_agg$x,length(levels(lat_c)),length(levels(lon_c))))
+imagePlot(log10(bathy_agg_modis),asp=1,col=rev(viridis(60)),nlevel=59)
 imagePlot(log10(bathy_agg_modis),asp=1,col=rev(viridis(60)),nlevel=59)
 
 hist((bathy_agg_modis))
