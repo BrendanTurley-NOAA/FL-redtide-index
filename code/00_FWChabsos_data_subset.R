@@ -33,6 +33,29 @@ habs <- habs[which(habs$LONGITUDE<=lonbox_e & habs$LONGITUDE>=lonbox_w &
 ind_ex <- which(habs$LONGITUDE>=(-82) & habs$LATITUDE>=28)
 habs <- habs[-ind_ex,]
 
+### average duplicates at same time and location; this disregards ancillary data like temperature, salinity, and wind
+habs_sub3 <- habs[,c(3:4,26)]
+names(habs)[c(3:4,26)]
+ind3 <- duplicated(habs_sub3)
+ind3.1 <- duplicated(habs_sub3,fromLast = T)
+length(which(ind3))
+
+dups1 <- which(ind3)
+dups2 <- which(ind3.1)
+
+plot(habs$date[dups1],habs$CELLCOUNT[dups1],col=2)
+points(habs$date[dups2],habs$CELLCOUNT[dups2],col=3)
+
+new <- rep(NA,length(dups1))
+for(i in 1:length(dups1)){
+  new[i] <- mean(habs$CELLCOUNT[c(dups1[i],dups2[i])],na.rm=T)
+}
+
+habs$CELLCOUNT[dups1] <- new
+plot(habs$date[dups1],habs$CELLCOUNT[dups1],col=2)
+habs <- habs[-dups2,]
+
+### plot data to see if it looks right
 plot(habs$LONGITUDE,habs$LATITUDE,asp=1)
 plot(habs$date,habs$CELLCOUNT)
 plot(habs$date,habs$CELLCOUNT+1,log='y')
