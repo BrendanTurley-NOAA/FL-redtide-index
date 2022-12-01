@@ -34,6 +34,7 @@ ind_ex <- which(habs$LONGITUDE>=(-82) & habs$LATITUDE>=28)
 habs <- habs[-ind_ex,]
 
 ### average duplicates at same time and location; this disregards ancillary data like temperature, salinity, and wind
+habs <- habs[order(habs$date),]
 habs_sub3 <- habs[,c(3:4,26)]
 names(habs)[c(3:4,26)]
 ind3 <- duplicated(habs_sub3)
