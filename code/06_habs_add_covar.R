@@ -141,6 +141,9 @@ habs_agg$lon_m <- cut(habs_agg$LONGITUDE,vec_brk(lon_modis))
 habs_agg$lat_m <- cut(habs_agg$LATITUDE,vec_brk(lat_modis))
 
 hab_bathy <- merge(habs_agg,bathy[,-c(1,2)],by=c('lon_m','lat_m'),all.x=T) # don't include superfluous lon/lats
+setwd('~/Documents/nasa/data/lowres_4km')
+write.csv(hab_bathy,'habs_covariates.csv')
+
 hist(hab_bathy$depth_m[which(hab_bathy$depth_m>=0)])
 plot(hab_bathy$LONGITUDE,hab_bathy$LATITUDE,cex=log(hab_bathy$depth_m),asp=1)
 plot(hab_bathy$LONGITUDE,hab_bathy$LATITUDE,asp=1)
