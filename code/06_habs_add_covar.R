@@ -144,6 +144,7 @@ hab_bathy <- merge(habs_agg,bathy[,-c(1,2)],by=c('lon_m','lat_m'),all.x=T) # don
 setwd('~/Documents/nasa/data/lowres_4km')
 write.csv(hab_bathy,'habs_covariates.csv')
 
+length(which(hab_bathy$depth_m>2))
 hist(hab_bathy$depth_m[which(hab_bathy$depth_m>=0)])
 plot(hab_bathy$LONGITUDE,hab_bathy$LATITUDE,cex=log(hab_bathy$depth_m),asp=1)
 plot(hab_bathy$LONGITUDE,hab_bathy$LATITUDE,asp=1)
@@ -229,3 +230,13 @@ anova(mod1,test='Chisq')
 mod1 <- glm(pa100k~yday,data=habs_agg,family=binomial(link='logit'))
 summary(mod1)
 anova(mod1,test='Chisq')
+
+
+library(mgcv)
+
+AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
+                   te(sst, depth_m) + te(rrs_667,week) + te(LONGITUDE,LATITUDE) + te(rbd,week) + te(depth_m), 
+                 data=hab_bathy, family = binomial, select=TRUE, method="REML")
+save(AllModel, file = "AllModel_initial.RData")
+p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
+summary(AllModel)

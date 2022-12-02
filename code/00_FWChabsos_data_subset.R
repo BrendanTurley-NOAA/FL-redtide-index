@@ -1,6 +1,7 @@
 library(lubridate)
 
 setwd('~/Desktop/professional/projects/Postdoc_FL/data/habs')
+# setwd('~/Downloads')
 
 # original data requested from https://habsos.noaa.gov/about
 habs1 <- read.csv('habsos_20220225.csv')
@@ -63,3 +64,6 @@ plot(habs$date,habs$CELLCOUNT+1,log='y')
 
 habs <- habs[order(habs$date),]
 write.csv(habs,'habsos_subset_FL03-21.csv',quote=T,row.names=F)
+
+
+table(year(habs$date),month(habs$date))
