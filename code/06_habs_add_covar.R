@@ -238,5 +238,7 @@ AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(c
                    te(sst, depth_m) + te(rrs_667,week) + te(LONGITUDE,LATITUDE) + te(rbd,week) + te(depth_m), 
                  data=hab_bathy, family = binomial, select=TRUE, method="REML")
 save(AllModel, file = "AllModel_initial.RData")
+setwd('~/Documents/nasa/data/lowres_4km')
+load('AllModel_initial.RData')
 p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
 summary(AllModel)
