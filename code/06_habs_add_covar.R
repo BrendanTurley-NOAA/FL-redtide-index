@@ -181,6 +181,41 @@ mod1 <- glm(pa100k~as.factor(month),data=habs_covar_agg,family=binomial(link='lo
 summary(mod1)
 anova(mod1,test='Chisq')
 
+preds <- predict(mod1,newdata=habs_covar_agg,se.fit=T,type='response')
+preds$month <- aggregate(preds$fit,by=list(habs_covar_agg$month),mean,na.rm=T)
+preds$month.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$month),mean,na.rm=T)
+
+plot(preds$month$Group.1,preds$month$x,pch=18)
+arrows(preds$month$Group.1,preds$month$x+preds$month.se$x,
+         preds$month$Group.1,preds$month$x-preds$month.se$x,length=.105,code=3,angle=90)
+
+library(pROC)
+
+temproc <- roc(habs_covar_agg$pa100k , preds$fit, plot=TRUE, grid=TRUE)
+# CALCULATE AREA UNDER THE CURVE
+temproc$auc  
+# Area under the curve: 0.6629
+# CONSTRUCT MATRIX OF ROC INFORMATION FOR EACH CUTOFF ("thresholds")	 
+roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
+                  temproc$sensitivities+temproc$specificities)
+# FIND CUTOFF WHERE SUM OF THE SENSITIVITY AND SPECIFITY IS MAX
+# Sensitivity = proportion of actual positives which are correctly identified as such
+# Specificity = proportion of negatives which are correctly identified as such
+max(roctable[,1]+roctable[,2])
+# [1] 1.241529
+# PRINT RECORD FOR THE MAX VALUE TO FIND CUTOFF (= 0.0862855  HERE)
+Threshold=roctable[roctable[,4] == max(roctable[,4]),][3]
+Threshold 
+# [1] 0.07898927
+TT=table(mod1$fitted>Threshold, habs_covar_agg$pa100k)
+#          0     1
+# FALSE 13108   621
+# TRUE  11104  1450
+FPR =  TT[2,1]/sum(TT[ ,1 ]) 
+FNR =   TT[1,2]/sum(TT[ ,2 ])    
+FPR # 0.4586156
+FNR # 0.2998551
+
 library(mgcv)
 
 AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
@@ -191,3 +226,5 @@ setwd('~/Documents/nasa/data/lowres_4km')
 load('AllModel_initial.RData')
 p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
 summary(AllModel)
+
+
