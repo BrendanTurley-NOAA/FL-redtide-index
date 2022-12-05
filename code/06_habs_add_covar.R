@@ -216,7 +216,7 @@ FNR =   TT[1,2]/sum(TT[ ,2 ])
 FPR # 0.4586156
 FNR # 0.2998551
 
-yr <- 2018
+yr <- 2005
 subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
 phat1 <- preds$fit[which(habs_covar_agg$year==yr )]
 
