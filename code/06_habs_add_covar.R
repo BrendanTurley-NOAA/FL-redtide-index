@@ -216,6 +216,15 @@ FNR =   TT[1,2]/sum(TT[ ,2 ])
 FPR # 0.4586156
 FNR # 0.2998551
 
+yr <- 2018
+subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
+phat1 <- preds$fit[which(habs_covar_agg$year==yr )]
+
+plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
+quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,add=T)
+
+
+
 library(mgcv)
 
 AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
