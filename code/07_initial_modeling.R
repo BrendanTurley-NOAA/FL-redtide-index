@@ -1,0 +1,166 @@
+gc()
+
+library(fields)
+library(lubridate)
+library(mgcv)
+library(pROC)
+library(randomForest)
+
+setwd('~/Documents/nasa/data/lowres_4km')
+# write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
+habs_covar_agg <- read.csv('habs_covariates_agg.csv')
+
+
+### random forest
+# https://www.r-bloggers.com/2021/04/random-forest-in-r/
+# https://stats.stackexchange.com/questions/41443/how-to-actually-plot-a-sample-tree-from-randomforestgettree
+# https://cran.rstudio.com/web/packages/randomForestExplainer/vignettes/randomForestExplainer.html
+
+set.seed(222)
+ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(0.7, 0.3))
+names(habs_covar_agg)[c(1:3,6:8)]
+habs_covar_agg$pa100k <- as.factor(habs_covar_agg$pa100k)
+train <- habs_covar_agg[ind==1,-c(1:3,6:8)] # remove all superfluous variables
+test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
+
+# rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,
+# data=train, proximity=T, importance=T)
+rf <- randomForest(pa100k~.,data=train, proximity=T, importance=T)
+print(rf)
+
+p1 <- predict(rf, train)
+confusionMatrix(p1, train$pa100k)
+p2 <- predict(rf, test)
+confusionMatrix(p2, test$pa100k)
+
+plot(rf)
+
+t <- tuneRF(train[,-20], train[,20],
+            stepFactor = 0.5,
+            plot = TRUE,
+            ntreeTry = 150,
+            trace = TRUE,
+            improve = 0.05)
+
+hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
+var_imp <- importance(rf,scale=T)
+var_imp
+par(mar=c(4,7,1,1))
+barplot(sort(var_imp[,1]),las=1,horiz=T,main='Importance (absence)')
+barplot(sort(var_imp[,2]),las=1,horiz=T,main='Importance (presence)')
+barplot(t(var_imp[,1:2]),las=1,horiz=T,col=c('gray20','gray80'),beside=T)
+legend('bottomright',c('absence','presence'),fill=c('gray20','gray80'),bty='n')
+plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecreaseGini')
+text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
+varImpPlot(rf,
+           sort = T,
+           main = "Variable Importance")
+
+partialPlot(rf,train,rbd)
+partialPlot(rf,train,abi)
+
+### initial model check
+covar <- names(habs_covar_agg)[c(9:22,24:25,27)]
+
+for(i in 1:length(covar)){
+  x_y <- formula(paste0('pa100k~',covar[i]))
+  mod1 <- glm(x_y,data=habs_covar_agg,family=binomial(link='logit'))
+  print(x_y)
+  print(summary(mod1))
+  cat('\n\n************ANOVA************\n\n')
+  print(anova(mod1,test='Chisq'))
+  cat('\n\n************END************\n\n')
+}
+
+mod1 <- glm(pa100k~as.factor(month),data=habs_covar_agg,family=binomial(link='logit'))
+summary(mod1)
+anova(mod1,test='Chisq')
+
+par(mfrow=c(3,3))
+for(i in c(4:5,9:25,27)){
+  plot(habs_covar_agg[,i],habs_covar_agg$pa100k)
+  # plot(habs_covar_agg[,i],habs_covar_agg$CELLCOUNT+1,log='y')
+  mtext(names(habs_covar_agg)[i])
+}
+
+mod0 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+bbp_morel+bbp_carder+abi+rrs_667,
+            data=habs_covar_agg,family=binomial(link='logit'))
+summary(mod0)
+anova(mod0,test='Chisq')
+mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+ssnlw488+cm_bbp+bbp_carder+abi,
+            data=habs_covar_agg,family=binomial(link='logit'))
+summary(mod1)
+anova(mod1,test='Chisq')
+
+preds <- predict(mod1,newdata=habs_covar_agg,se.fit=T,type='response')
+preds$month <- aggregate(preds$fit,by=list(habs_covar_agg$month),mean,na.rm=T)
+preds$month.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$month),mean,na.rm=T)
+preds$year <- aggregate(preds$fit,by=list(habs_covar_agg$year),mean,na.rm=T)
+preds$year.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$year),mean,na.rm=T)
+
+covar <- names(habs_covar_agg)[c(9:11,14:15,17:18,20)]
+
+par(mfrow=c(3,3))
+for(i in c(9:11,14:15,17:18,20)){
+  plot(habs_covar_agg[,i],preds$fit)
+  mtext(names(habs_covar_agg)[i])
+}
+
+plot(preds$month$Group.1,preds$month$x,pch=18,ylim=c(0,.2))
+arrows(preds$month$Group.1,preds$month$x+preds$month.se$x,
+       preds$month$Group.1,preds$month$x-preds$month.se$x,length=.105,code=3,angle=90)
+
+plot(preds$year$Group.1,preds$year$x,pch=18,ylim=c(0,.2),typ='n')
+# arrows(preds$year$Group.1,preds$year$x+preds$year.se$x,
+# preds$year$Group.1,preds$year$x-preds$year.se$x,length=.105,code=3,angle=90)
+polygon(c(preds$year$Group.1,rev(preds$year$Group.1)),
+        c(preds$year$x+preds$year.se$x,rev(preds$year$x-preds$year.se$x)),col='gray90')
+points(preds$year$Group.1,preds$year$x,pch=18,typ='l')
+
+
+### ROC analysis
+temproc <- roc(habs_covar_agg$pa100k , preds$fit, plot=TRUE, grid=TRUE)
+# CALCULATE AREA UNDER THE CURVE
+temproc$auc  
+# Area under the curve: 0.6629
+# CONSTRUCT MATRIX OF ROC INFORMATION FOR EACH CUTOFF ("thresholds")	 
+roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
+                  temproc$sensitivities+temproc$specificities)
+# FIND CUTOFF WHERE SUM OF THE SENSITIVITY AND SPECIFITY IS MAX
+# Sensitivity = proportion of actual positives which are correctly identified as such
+# Specificity = proportion of negatives which are correctly identified as such
+max(roctable[,1]+roctable[,2])
+# [1] 1.241529
+# PRINT RECORD FOR THE MAX VALUE TO FIND CUTOFF (= 0.0862855  HERE)
+Threshold=roctable[roctable[,4] == max(roctable[,4]),][3]
+Threshold 
+# [1] 0.07898927
+TT=table(mod1$fitted>Threshold, habs_covar_agg$pa100k)
+#          0     1
+# FALSE 13108   621
+# TRUE  11104  1450
+FPR =  TT[2,1]/sum(TT[ ,1 ]) 
+FNR =   TT[1,2]/sum(TT[ ,2 ])    
+FPR # 0.4586156
+FNR # 0.2998551
+
+yr <- 2005
+subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
+phat1 <- preds$fit[which(habs_covar_agg$year==yr )]
+
+par(mar=c(5,5,1,6))
+plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
+quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
+
+
+### GAMs
+AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
+                   te(sst, depth_m) + te(rrs_667,week) + te(LONGITUDE,LATITUDE) + te(rbd,week) + te(depth_m), 
+                 data=habs_covar_agg, family = binomial, select=TRUE, method="REML")
+save(AllModel, file = "AllModel_initial.RData")
+setwd('~/Documents/nasa/data/lowres_4km')
+load('AllModel_initial.RData')
+p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
+summary(AllModel)
+
+

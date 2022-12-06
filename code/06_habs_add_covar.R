@@ -154,7 +154,7 @@ habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m>2),] # remove sam
 habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m<(-200)),] # remove samples taken at locations with depth greater than 200 m
 
 setwd('~/Documents/nasa/data/lowres_4km')
-write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
+# write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 
 test <- na.omit(habs_covar_agg)
 dim(test)==dim(habs_covar_agg) ### should be true
@@ -162,94 +162,5 @@ dim(test)==dim(habs_covar_agg) ### should be true
 par(mfrow=c(2,1))
 plot(habs_covar_agg$date,habs_covar_agg$CELLCOUNT+1,log='y')
 plot(habs$date,habs$CELLCOUNT+1,log='y')
-
-
-### initial model check
-covar <- names(habs_covar_agg)[c(9:22,24:25,27)]
-
-for(i in 1:length(covar)){
-  x_y <- formula(paste0('pa100k~',covar[i]))
-  mod1 <- glm(x_y,data=habs_covar_agg,family=binomial(link='logit'))
-  print(x_y)
-  print(summary(mod1))
-  cat('\n\n************ANOVA************\n\n')
-  print(anova(mod1,test='Chisq'))
-  cat('\n\n************END************\n\n')
-}
-
-mod1 <- glm(pa100k~as.factor(month),data=habs_covar_agg,family=binomial(link='logit'))
-summary(mod1)
-anova(mod1,test='Chisq')
-
-
-mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+bbp_morel+bbp_carder+abi+rrs_667,
-            data=habs_covar_agg,family=binomial(link='logit'))
-summary(mod1)
-anova(mod1,test='Chisq')
-
-preds <- predict(mod1,newdata=habs_covar_agg,se.fit=T,type='response')
-preds$month <- aggregate(preds$fit,by=list(habs_covar_agg$month),mean,na.rm=T)
-preds$month.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$month),mean,na.rm=T)
-preds$year <- aggregate(preds$fit,by=list(habs_covar_agg$year),mean,na.rm=T)
-preds$year.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$year),mean,na.rm=T)
-
-plot(preds$month$Group.1,preds$month$x,pch=18,ylim=c(0,.2))
-arrows(preds$month$Group.1,preds$month$x+preds$month.se$x,
-         preds$month$Group.1,preds$month$x-preds$month.se$x,length=.105,code=3,angle=90)
-
-plot(preds$year$Group.1,preds$year$x,pch=18,ylim=c(0,.2),typ='n')
-# arrows(preds$year$Group.1,preds$year$x+preds$year.se$x,
-       # preds$year$Group.1,preds$year$x-preds$year.se$x,length=.105,code=3,angle=90)
-polygon(c(preds$year$Group.1,rev(preds$year$Group.1)),
-        c(preds$year$x+preds$year.se$x,rev(preds$year$x-preds$year.se$x)),col='gray90')
-points(preds$year$Group.1,preds$year$x,pch=18,typ='l')
-
-
-library(pROC)
-
-temproc <- roc(habs_covar_agg$pa100k , preds$fit, plot=TRUE, grid=TRUE)
-# CALCULATE AREA UNDER THE CURVE
-temproc$auc  
-# Area under the curve: 0.6629
-# CONSTRUCT MATRIX OF ROC INFORMATION FOR EACH CUTOFF ("thresholds")	 
-roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
-                  temproc$sensitivities+temproc$specificities)
-# FIND CUTOFF WHERE SUM OF THE SENSITIVITY AND SPECIFITY IS MAX
-# Sensitivity = proportion of actual positives which are correctly identified as such
-# Specificity = proportion of negatives which are correctly identified as such
-max(roctable[,1]+roctable[,2])
-# [1] 1.241529
-# PRINT RECORD FOR THE MAX VALUE TO FIND CUTOFF (= 0.0862855  HERE)
-Threshold=roctable[roctable[,4] == max(roctable[,4]),][3]
-Threshold 
-# [1] 0.07898927
-TT=table(mod1$fitted>Threshold, habs_covar_agg$pa100k)
-#          0     1
-# FALSE 13108   621
-# TRUE  11104  1450
-FPR =  TT[2,1]/sum(TT[ ,1 ]) 
-FNR =   TT[1,2]/sum(TT[ ,2 ])    
-FPR # 0.4586156
-FNR # 0.2998551
-
-yr <- 2005
-subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
-phat1 <- preds$fit[which(habs_covar_agg$year==yr )]
-
-par(mar=c(5,5,1,6))
-plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
-quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
-
-
-library(mgcv)
-
-AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
-                   te(sst, depth_m) + te(rrs_667,week) + te(LONGITUDE,LATITUDE) + te(rbd,week) + te(depth_m), 
-                 data=habs_covar_agg, family = binomial, select=TRUE, method="REML")
-save(AllModel, file = "AllModel_initial.RData")
-setwd('~/Documents/nasa/data/lowres_4km')
-load('AllModel_initial.RData')
-p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
-summary(AllModel)
 
 
