@@ -177,17 +177,27 @@ for(i in 1:length(covar)){
   cat('\n\n************END************\n\n')
 }
 
-mod1 <- glm(pa100k~as.factor(month),data=habs_covar_agg,family=binomial(link='logit'))
+mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+bbp_morel+bbp_carder+abi+rrs_667,
+            data=habs_covar_agg,family=binomial(link='logit'))
 summary(mod1)
 anova(mod1,test='Chisq')
 
 preds <- predict(mod1,newdata=habs_covar_agg,se.fit=T,type='response')
 preds$month <- aggregate(preds$fit,by=list(habs_covar_agg$month),mean,na.rm=T)
 preds$month.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$month),mean,na.rm=T)
+preds$year <- aggregate(preds$fit,by=list(habs_covar_agg$year),mean,na.rm=T)
+preds$year.se <- aggregate(preds$se.fit,by=list(habs_covar_agg$year),mean,na.rm=T)
 
-plot(preds$month$Group.1,preds$month$x,pch=18)
+plot(preds$month$Group.1,preds$month$x,pch=18,ylim=c(0,.2))
 arrows(preds$month$Group.1,preds$month$x+preds$month.se$x,
          preds$month$Group.1,preds$month$x-preds$month.se$x,length=.105,code=3,angle=90)
+
+plot(preds$year$Group.1,preds$year$x,pch=18,ylim=c(0,.2),typ='n')
+# arrows(preds$year$Group.1,preds$year$x+preds$year.se$x,
+       # preds$year$Group.1,preds$year$x-preds$year.se$x,length=.105,code=3,angle=90)
+polygon(c(preds$year$Group.1,rev(preds$year$Group.1)),
+        c(preds$year$x+preds$year.se$x,rev(preds$year$x-preds$year.se$x)),col='gray80')
+points(preds$year$Group.1,preds$year$x,pch=18,typ='l')
 
 library(pROC)
 
@@ -220,9 +230,9 @@ yr <- 2005
 subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
 phat1 <- preds$fit[which(habs_covar_agg$year==yr )]
 
+par(mar=c(5,5,1,6))
 plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
-quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,add=T)
-
+quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
 
 
 library(mgcv)
