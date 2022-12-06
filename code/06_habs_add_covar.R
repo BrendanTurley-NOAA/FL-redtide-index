@@ -177,6 +177,11 @@ for(i in 1:length(covar)){
   cat('\n\n************END************\n\n')
 }
 
+mod1 <- glm(pa100k~as.factor(month),data=habs_covar_agg,family=binomial(link='logit'))
+summary(mod1)
+anova(mod1,test='Chisq')
+
+
 mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+bbp_morel+bbp_carder+abi+rrs_667,
             data=habs_covar_agg,family=binomial(link='logit'))
 summary(mod1)
@@ -196,8 +201,9 @@ plot(preds$year$Group.1,preds$year$x,pch=18,ylim=c(0,.2),typ='n')
 # arrows(preds$year$Group.1,preds$year$x+preds$year.se$x,
        # preds$year$Group.1,preds$year$x-preds$year.se$x,length=.105,code=3,angle=90)
 polygon(c(preds$year$Group.1,rev(preds$year$Group.1)),
-        c(preds$year$x+preds$year.se$x,rev(preds$year$x-preds$year.se$x)),col='gray80')
+        c(preds$year$x+preds$year.se$x,rev(preds$year$x-preds$year.se$x)),col='gray90')
 points(preds$year$Group.1,preds$year$x,pch=18,typ='l')
+
 
 library(pROC)
 
