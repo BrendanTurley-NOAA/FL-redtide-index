@@ -38,7 +38,7 @@ hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
 plot(randomForest::margin(rf),sort=T)
 ### tune
 rf_tune <- tuneRF(train[,-20],  train[,20],
-                  stepFactor = 0.5, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = 0.05)
+                  stepFactor = 2, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = .05)
 
 # https://topepo.github.io/caret/measuring-performance.html
 p1 <- predict(rf, train)
