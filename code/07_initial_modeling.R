@@ -1,5 +1,6 @@
 gc()
 
+library(caret)
 library(fields)
 library(lubridate)
 library(mgcv)
@@ -10,6 +11,8 @@ setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 habs_covar_agg <- read.csv('habs_covariates_agg.csv')
 
+plot(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==0)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==0)],asp=1,pch=20,cex=.7)
+points(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==1)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==1)],col=4,pch=20,cex=.7)
 
 ### random forest
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
@@ -26,29 +29,53 @@ test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
 # rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,
 # data=train, proximity=T, importance=T)
 rf <- randomForest(pa100k~.,data=train, proximity=T, importance=T)
+setwd('~/Documents/nasa/data/lowres_4km')
+save(rf, file = "randomForest_initial.RData")
+# load('randomForest_initial.RData')
 print(rf)
-
-p1 <- predict(rf, train)
-confusionMatrix(p1, train$pa100k)
-p2 <- predict(rf, test)
-confusionMatrix(p2, test$pa100k)
-
-plot(rf)
-
-t <- tuneRF(train[,-20], train[,20],
-            stepFactor = 0.5,
-            plot = TRUE,
-            ntreeTry = 150,
-            trace = TRUE,
-            improve = 0.05)
-
+# print(object.size(rf),units='Mb')
 hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
+plot(randomForest::margin(rf),sort=T)
+### tune
+rf_tune <- tuneRF(train[,-20],  train[,20],stepFactor = 0.5, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = 0.05)
+
+# https://topepo.github.io/caret/measuring-performance.html
+p1 <- predict(rf, train)
+confusionMatrix(p1, train$pa100k,positive='1')
+p2 <- predict(rf, test)
+tabs <- addmargins(table(p2,test$pa100k))
+tabs
+error_mat <- confusionMatrix(p2, test$pa100k,positive='1')
+error_mat
+error_mat$byClass # F1 out of 1; https://en.wikipedia.org/wiki/F-score; https://en.wikipedia.org/wiki/Sensitivity_and_specificity
+### 2022/12/07 - there is a high specificity (few false positives) and low sensitivity (many false negatives); the opposite of what is desired
+tabs[1,2]/tabs[3,2] # FNR or 1 - sensitivity
+tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
+
+plot(rf,log='y')
+legend('topright',c('OOB','Neg','Pos'),col=c(1,2,3),lty=1)
+
+### ROC analysis
+p3 <- predict(rf, test, type='prob')
+temproc <- roc(test$pa100k , p3[,2], plot=TRUE, grid=TRUE)
+# CALCULATE AREA UNDER THE CURVE
+temproc$auc  
+
+yr <- 2005
+subset <- test[which(test$year==yr ),]
+phat1 <- p3[,2][which(test$year==yr )]
+
+par(mar=c(5,5,1,6))
+plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
+quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
+
+
 var_imp <- importance(rf,scale=T)
 var_imp
 par(mar=c(4,7,1,1))
 barplot(sort(var_imp[,1]),las=1,horiz=T,main='Importance (absence)')
 barplot(sort(var_imp[,2]),las=1,horiz=T,main='Importance (presence)')
-barplot(t(var_imp[,1:2]),las=1,horiz=T,col=c('gray20','gray80'),beside=T)
+barplot(t(var_imp[,1:2]),las=1,horiz=T,col=c('gray20','gray80'),beside=F)
 legend('bottomright',c('absence','presence'),fill=c('gray20','gray80'),bty='n')
 plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecreaseGini')
 text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
@@ -56,8 +83,12 @@ varImpPlot(rf,
            sort = T,
            main = "Variable Importance")
 
-partialPlot(rf,train,rbd)
-partialPlot(rf,train,abi)
+ind_var <- rownames(var_imp)[order(var_imp[,4],decreasing=T)]
+par(mfrow=c(3,3),mar=c(4,4,1,1))
+for (i in seq_along(ind_var)) {
+  partialPlot(rf, train, ind_var[i], xlab=ind_var[i],
+              main=paste("Partial Dependence on", ind_var[i]))
+}
 
 ### initial model check
 covar <- names(habs_covar_agg)[c(9:22,24:25,27)]
@@ -157,9 +188,9 @@ quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
 AllModel  <- gam(as.factor(pa100k) ~ as.factor(month) + te(chl_anom,week) + te(chlor_a,week) + te(bbp_carder,bbp_morel) + 
                    te(sst, depth_m) + te(rrs_667,week) + te(LONGITUDE,LATITUDE) + te(rbd,week) + te(depth_m), 
                  data=habs_covar_agg, family = binomial, select=TRUE, method="REML")
-save(AllModel, file = "AllModel_initial.RData")
 setwd('~/Documents/nasa/data/lowres_4km')
-load('AllModel_initial.RData')
+save(AllModel, file = "AllModelgam_initial.RData")
+load('AllModelgam_initial.RData')
 p <- plot(AllModel, pages=1, se=TRUE, cex.axis=2, cex.lab=1.5)
 summary(AllModel)
 
