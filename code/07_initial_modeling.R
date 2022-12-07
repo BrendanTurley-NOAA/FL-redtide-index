@@ -28,7 +28,7 @@ test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
 
 # rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,
 # data=train, proximity=T, importance=T)
-rf <- randomForest(pa100k~.,data=train, proximity=T, importance=T)
+rf <- randomForest(pa100k~., data=train, proximity=T, importance=T)
 setwd('~/Documents/nasa/data/lowres_4km')
 save(rf, file = "randomForest_initial.RData")
 # load('randomForest_initial.RData')
@@ -37,7 +37,8 @@ print(rf)
 hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
 plot(randomForest::margin(rf),sort=T)
 ### tune
-rf_tune <- tuneRF(train[,-20],  train[,20],stepFactor = 0.5, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = 0.05)
+rf_tune <- tuneRF(train[,-20],  train[,20],
+                  stepFactor = 0.5, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = 0.05)
 
 # https://topepo.github.io/caret/measuring-performance.html
 p1 <- predict(rf, train)
@@ -45,7 +46,7 @@ confusionMatrix(p1, train$pa100k,positive='1')
 p2 <- predict(rf, test)
 tabs <- addmargins(table(p2,test$pa100k))
 tabs
-error_mat <- confusionMatrix(p2, test$pa100k,positive='1')
+error_mat <- confusionMatrix(p2, test$pa100k, positive='1', mode='everything')
 error_mat
 error_mat$byClass # F1 out of 1; https://en.wikipedia.org/wiki/F-score; https://en.wikipedia.org/wiki/Sensitivity_and_specificity
 ### 2022/12/07 - there is a high specificity (few false positives) and low sensitivity (many false negatives); the opposite of what is desired
@@ -79,16 +80,34 @@ barplot(t(var_imp[,1:2]),las=1,horiz=T,col=c('gray20','gray80'),beside=F)
 legend('bottomright',c('absence','presence'),fill=c('gray20','gray80'),bty='n')
 plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecreaseGini')
 text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
+
+png('rti_rf_varimp.png',width=9,height=7,pointsize=12,unit='in',res=300)
 varImpPlot(rf,
            sort = T,
            main = "Variable Importance")
+dev.off()
+
+var_imp2 <- varImp(rf,scale=T)
+barplot(sort(var_imp2[,2]),names.arg = rownames(var_imp2)[order(var_imp2[,2])],las=2,horiz=T)
+
+par(mfrow=c(2,2))
+plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecreaseGini')
+text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
+
+plot(var_imp[,3],var_imp2[,2],typ='n',xlab='MeanDecreaseAccuracy',ylab='VarImp (caret)')
+text(var_imp[,3],var_imp2[,2],row.names(var_imp),cex=.8)
+
+plot(var_imp2[,2],var_imp[,4],typ='n',xlab='VarImp (caret)',ylab='MeanDecreaseGini')
+text(var_imp2[,2],var_imp[,4],row.names(var_imp),cex=.8)
 
 ind_var <- rownames(var_imp)[order(var_imp[,4],decreasing=T)]
+# pdf('rti_rf_partial.pdf',width=9,height=7,pointsize=12)
 par(mfrow=c(3,3),mar=c(4,4,1,1))
 for (i in seq_along(ind_var)) {
   partialPlot(rf, train, ind_var[i], xlab=ind_var[i],
-              main=paste("Partial Dependence on", ind_var[i]))
+              main=paste("Partial Dependence on", ind_var[i]),rug=T)
 }
+# dev.off()
 
 ### initial model check
 covar <- names(habs_covar_agg)[c(9:22,24:25,27)]
