@@ -37,15 +37,15 @@ parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carde
 setwd('~/Documents/nasa/data/lowres_4km')
 load('bathy.RData')
 
+lonlat_modis <- expand.grid(lon=lon_modis,lat=lat_modis)
+lonlat_modis$lon_m <- cut(lonlat_modis$lon,vec_brk(lon_modis))
+lonlat_modis$lat_m <- cut(lonlat_modis$lat,vec_brk(lat_modis))
+
 bathy <- data.frame(longitude=lonlat_modis$lon,
                     latitude=lonlat_modis$lat,
                     depth_m=as.vector(bathy_agg_modis[,ncol(bathy_agg_modis):1])) ### bathymetry is upside up; flipped to be consistent with other inputs
 bathy$lon_m <- cut(bathy$longitude,vec_brk(lon_modis))
 bathy$lat_m <- cut(bathy$latitude,vec_brk(lat_modis))
-
-lonlat_modis <- expand.grid(lon=lon_modis,lat=lat_modis)
-lonlat_modis$lon_m <- cut(lonlat_modis$lon,vec_brk(lon_modis))
-lonlat_modis$lat_m <- cut(lonlat_modis$lat,vec_brk(lat_modis))
 
 ### cut by bathymetry grid
 habs$lon_m <- cut(habs$LONGITUDE,vec_brk(lon_modis))
@@ -130,7 +130,10 @@ t1 <- system.time(
 )
 # user   system  elapsed 
 # 674.875  453.739 1338.307
+setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_n,'habs_covariates_full.csv',row.names = F)
+habs_n <- read.csv('habs_covariates_full.csv')
+habs_n$date <- ymd_hms(habs_n$date)
 
 names(habs_n)[c(3:4,6,10,26:41)]
 habs_reduce <- habs_n[,c(3:4,6,10,26:41)]
@@ -140,11 +143,11 @@ habs_reduce$week <- week(habs_reduce$date)
 habs_reduce$yday <- yday(habs_reduce$date)
 ### weekly aggregates
 habs_reduce$ygm <- paste(habs_reduce$year,habs_reduce$month,habs_reduce$week,habs_reduce$lon_m,habs_reduce$lat_m)
-habs_agg <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,CELLCOUNT,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,cm_bbp,sst,year,month,yday,week)~ygm,data=habs_reduce,mean,na.rm=T)
+habs_agg <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,CELLCOUNT,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,cm_bbp,sst,year,month,yday,week)~ygm,
+                      data=habs_reduce,mean,na.rm=T)
 habs_agg$date <- as.Date(habs_agg$yday-1,origin=paste0(habs_agg$year,'-01-01'))
 ### create binary classifier
-habs_agg$pa100k <- rep(0,nrow(habs_agg))
-habs_agg$pa100k[habs_agg$CELLCOUNT>=100000] <- 1
+habs_agg$pa100k <- ifelse(habs_agg$CELLCOUNT>=1e5,1,0)
 ### assign to grid
 habs_agg$lon_m <- cut(habs_agg$LONGITUDE,vec_brk(lon_modis))
 habs_agg$lat_m <- cut(habs_agg$LATITUDE,vec_brk(lat_modis))
@@ -163,4 +166,38 @@ par(mfrow=c(2,1))
 plot(habs_covar_agg$date,habs_covar_agg$CELLCOUNT+1,log='y')
 plot(habs$date,habs$CELLCOUNT+1,log='y')
 
+
+### alternative; does not change pa100k values
+habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,cm_bbp,sst,year,month,yday,week)~ygm,
+                         data=habs_reduce,mean,na.rm=T)
+habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,quantile,.9,na.rm=T)
+habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,
+                         function(x){if(length(x)<5){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
+habs_agg2.3 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,length)
+habs_agg2 <- merge(habs_agg2.1,habs_agg2.2,by=c('ygm'),all.x=T)
+habs_agg2$date <- as.Date(habs_agg2$yday-1,origin=paste0(habs_agg2$year,'-01-01'))
+# habs_aggt <- merge(habs_agg,habs_agg2,by=c('ygm'),all=T)
+### create binary classifier
+habs_agg2$pa100k <- ifelse(habs_agg2$CELLCOUNT>=1e5,1,0)
+### assign to grid
+habs_agg2$lon_m <- cut(habs_agg2$LONGITUDE,vec_brk(lon_modis))
+habs_agg2$lat_m <- cut(habs_agg2$LATITUDE,vec_brk(lat_modis))
+### add bathymetry
+habs_covar_agg2 <- merge(habs_agg2,bathy[,-c(1,2)],by=c('lon_m','lat_m'),all.x=T) # don't include superfluous lon/lats
+habs_covar_agg2 <- habs_covar_agg2[-which(habs_covar_agg2$depth_m>2),] # remove samples taken at altitude greater than 2 m
+habs_covar_agg2 <- habs_covar_agg2[-which(habs_covar_agg2$depth_m<(-200)),] # remove samples taken at locations with depth greater than 200 m
+
+setwd('~/Documents/nasa/data/lowres_4km')
+# write.csv(habs_covar_agg2,'habs_covariates_agg2.csv',row.names = F)
+
+test <- na.omit(habs_covar_agg2)
+dim(test)==dim(habs_covar_agg2) ### should be true
+
+par(mfrow=c(3,1))
+plot(habs_covar_agg$date,habs_covar_agg$CELLCOUNT+1,log='y')
+plot(habs_covar_agg2$date,habs_covar_agg2$CELLCOUNT+1,log='y')
+plot(habs$date,habs$CELLCOUNT+1,log='y')
+
+length(habs_covar_agg$pa100k==1)
+length(habs_covar_agg2$pa100k==1)
 
