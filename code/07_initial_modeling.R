@@ -6,13 +6,69 @@ library(lubridate)
 library(mgcv)
 library(pROC)
 library(randomForest)
+library(scales)
 
 setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 habs_covar_agg <- read.csv('habs_covariates_agg.csv')
+habs_covar_agg$date <- ymd(habs_covar_agg$date)
 
 plot(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==0)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==0)],asp=1,pch=20,cex=.7)
 points(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==1)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==1)],col=4,pch=20,cex=.7)
+
+### plot data
+look <- habs_covar_agg[,-c(1:8,22:26)]
+
+par(mfrow=c(2,2))
+for(i in 1:ncol(look)){
+  plot(habs_covar_agg$date,look[,i],
+       xlab='date',ylab=paste(names(look)[i]),
+       pch=20,col=alpha(1,.1),cex=.8)
+}
+
+par(mfrow=c(2,2))
+for(i in 1:ncol(look)){
+  plot(habs_covar_agg$yday,look[,i],
+       xlab='yday',ylab=paste(names(look)[i]),
+       pch=20,col=alpha(1,.1),cex=.8)
+}
+
+res <- p_val <- matrix(NA,ncol(look),ncol(look))
+for(i in 1:ncol(look)){
+  for(j in 1:ncol(look)){
+    tmp <- cor.test(look[,i],look[,j],method='spearman')
+    res[i,j] <- tmp$estimate
+    p_val[i,j] <- tmp$p.value
+  }
+}
+row.names(res) <- colnames(res) <- names(look)
+# diag(res) <- NA
+# diag(p_val) <- NA
+# res[which(p_val>.05/(length(which(!is.na(res)))))] <- NA
+
+lm_neg <- colorRampPalette(c('dodgerblue4','deepskyblue3','lightskyblue1','gray95'))
+lm_pos <- colorRampPalette(c('gray95','rosybrown1','tomato2','red4'))
+brks <- seq(-1,1,.1)
+neg <- lm_neg(length(which(brks<0)))
+pos <- lm_pos(length(which(brks>0)))
+res2 <- res
+res2[lower.tri(res2,diag=T)] <- NA
+
+par(mar=c(1,6,6,5))
+imagePlot(1:14,1:14,res2,
+          breaks=brks,col=c(neg,pos),
+          xaxt='n',yaxt='n',xlab='',ylab='',asp=1)
+axis(2,2:14,names(look)[-1],las=1)
+axis(3,1:13,names(look)[-14],las=2)
+
+
+clust <- hclust(as.dist(1-res))
+plot(clust)
+
+pca1 <- princomp(look)
+loadings(pca1)
+biplot(pca1)
+plot(pca1)
 
 ### random forest
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
