@@ -19,18 +19,22 @@ points(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==1)],habs_covar_agg$
 ### plot data
 look <- habs_covar_agg[,-c(1:8,22:26)]
 
-par(mfrow=c(2,2))
+par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$date,look[,i],
        xlab='date',ylab=paste(names(look)[i]),
        pch=20,col=alpha(1,.1),cex=.8)
+  sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.5)
+  points(sp$x,sp$y,col=2,typ='l',lwd=2)
 }
 
-par(mfrow=c(2,2))
+par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$yday,look[,i],
        xlab='yday',ylab=paste(names(look)[i]),
        pch=20,col=alpha(1,.1),cex=.8)
+  sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.5)
+  points(sp$x,sp$y,col=2,typ='l',lwd=2)
 }
 
 res <- p_val <- matrix(NA,ncol(look),ncol(look))
@@ -54,16 +58,22 @@ pos <- lm_pos(length(which(brks>0)))
 res2 <- res
 res2[lower.tri(res2,diag=T)] <- NA
 
-par(mar=c(1,6,6,5))
+par(mar=c(1,6,6,3),pin=c(3,3))
 imagePlot(1:14,1:14,res2,
           breaks=brks,col=c(neg,pos),
           xaxt='n',yaxt='n',xlab='',ylab='',asp=1)
 axis(2,2:14,names(look)[-1],las=1)
 axis(3,1:13,names(look)[-14],las=2)
 
+sort(rowSums(abs(res)))
+
+heatmap(res,symm=F)
 
 clust <- hclust(as.dist(1-res))
 plot(clust)
+
+dend <- as.dendrogram(clust)
+plot(dend)
 
 pca1 <- princomp(look)
 loadings(pca1)
