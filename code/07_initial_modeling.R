@@ -23,18 +23,24 @@ par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$date,look[,i],
        xlab='date',ylab=paste(names(look)[i]),
-       pch=20,col=alpha(1,.1),cex=.8)
+       pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
+  abline(v=as.Date(paste0(2000:2022,'-01-01')),lty=5,col='gray50') 
   sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.5)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
+  axis(1,as.Date(paste0(seq(2000,2022,1),'-01-01')),seq(2000,2022,1),las=2)
 }
 
+dates <- data.frame(date=seq(as.Date('2003-01-01'),as.Date('2003-12-31'),'day'),yday=yday(seq(as.Date('2003-01-01'),as.Date('2003-12-31'),'day')))
+ind <- which(day(dates$date)==1)
 par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$yday,look[,i],
-       xlab='yday',ylab=paste(names(look)[i]),
-       pch=20,col=alpha(1,.1),cex=.8)
-  sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.5)
+       xlab='date',ylab=paste(names(look)[i]),
+       pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
+  abline(v=ind,lty=5,col='gray50') 
+  sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.6)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
+  axis(1,ind,month.abb[1:12])
 }
 
 res <- p_val <- matrix(NA,ncol(look),ncol(look))
