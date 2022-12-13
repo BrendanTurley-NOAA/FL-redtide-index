@@ -128,6 +128,9 @@ t1 <- system.time(
     setTxtProgressBar(pb, i)
   }
 )
+t1
+# user   system  elapsed 
+# 624.090  444.737 1205.007 
 # user   system  elapsed 
 # 674.875  453.739 1338.307
 setwd('~/Documents/nasa/data/lowres_4km')
@@ -143,7 +146,7 @@ habs_reduce$week <- week(habs_reduce$date)
 habs_reduce$yday <- yday(habs_reduce$date)
 ### weekly aggregates
 habs_reduce$ygm <- paste(habs_reduce$year,habs_reduce$month,habs_reduce$week,habs_reduce$lon_m,habs_reduce$lat_m)
-habs_agg <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,CELLCOUNT,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,cm_bbp,sst,year,month,yday,week)~ygm,
+habs_agg <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,CELLCOUNT,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygm,
                       data=habs_reduce,mean,na.rm=T)
 habs_agg$date <- as.Date(habs_agg$yday-1,origin=paste0(habs_agg$year,'-01-01'))
 ### create binary classifier
