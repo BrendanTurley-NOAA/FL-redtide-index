@@ -24,8 +24,9 @@ for(i in 1:ncol(look)){
   plot(habs_covar_agg$date,look[,i],
        xlab='date',ylab=paste(names(look)[i]),
        pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
-  abline(v=as.Date(paste0(2000:2022,'-01-01')),lty=5,col='gray50') 
-  sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.5)
+  abline(v=as.Date(paste0(2000:2022,'-01-01')),lty=5,col='gray50')
+  abline(h=0,lty=5,col='gray70')
+  sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.6)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
   axis(1,as.Date(paste0(seq(2000,2022,1),'-01-01')),seq(2000,2022,1),las=2)
 }
@@ -38,6 +39,7 @@ for(i in 1:ncol(look)){
        xlab='date',ylab=paste(names(look)[i]),
        pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
   abline(v=ind,lty=5,col='gray50') 
+  abline(h=0,lty=5,col='gray70')
   sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.6)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
   axis(1,ind,month.abb[1:12])
@@ -81,10 +83,10 @@ plot(clust)
 dend <- as.dendrogram(clust)
 plot(dend)
 
-pca1 <- princomp(look)
-loadings(pca1)
-biplot(pca1)
-plot(pca1)
+# pca1 <- princomp(look)
+# loadings(pca1)
+# biplot(pca1)
+# plot(pca1)
 
 ### random forest
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
