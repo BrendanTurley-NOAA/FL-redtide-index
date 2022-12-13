@@ -100,9 +100,10 @@ habs_covar_agg$pa100k <- as.factor(habs_covar_agg$pa100k)
 train <- habs_covar_agg[ind==1,-c(1:3,6:8)] # remove all superfluous variables
 test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
 
-# rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,
-# data=train, proximity=T, importance=T)
+# rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,data=train, proximity=T, importance=T)
 rf <- randomForest(pa100k~., data=train, proximity=T, importance=T)
+# Error: vector memory exhausted (limit reached?)
+# https://stackoverflow.com/questions/17052436/does-random-forest-in-r-have-a-limitation-of-size-of-training-data
 setwd('~/Documents/nasa/data/lowres_4km')
 save(rf, file = "randomForest_initial.RData")
 # load('randomForest_initial.RData')
