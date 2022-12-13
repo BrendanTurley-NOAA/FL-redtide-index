@@ -31,7 +31,7 @@ habs <- habs[order(habs$date),]
 # table(habs$year,habs$week)
 
 ### modis derived parms
-parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi','cm_bbp')
+parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','ssnlw488','carder_bbp','morel_bbp','cm_bbp','abi','rbd','kbbi')
 
 ### load bathymetry and grid
 setwd('~/Documents/nasa/data/lowres_4km')

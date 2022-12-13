@@ -63,7 +63,7 @@ t1 <- system.time(
   for(yr in 2003:2021){
     # data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
     data_yday <- readRDS(paste0('aqua_modis_daily_',yr,'_4km.rds'))
-    data_out <- array(NA,c(11,
+    data_out <- array(NA,c(12,
                            length(lon2),
                            length(lat2),
                            dim(data_yday)[4]))
@@ -102,38 +102,36 @@ t1 <- system.time(
     # nflh / (1 + (rrs_547 - 0.0015) * 80)
     abi <- data_yday[grep('nflh', parm),,,] / (1 + (data_yday[grep(547, parm),,,] - 0.0015) * 80)
     
-    # bbp_Morel - chlor_a
-    # (.3 * pow(chlor_a, .62) * (.002 + .02 * (.5 - .25 * log10(chlor_a))))
-    bbp_morel <- .3 * (data_yday[grep('chlor_a', parm),,,]^.62) * (.002 + .02 * (.5 - .25 * log10(data_yday[grep('chlor_a', parm),,,])))
-    
-    # bbp_Carder - rrs_555
+    # carder_bbp - rrs_555
     # (2.058 * Rrs_555 - .00182)
-    bbp_carder <- 2.058 * data_yday[grep('555', parm),,,] - .00182
+    carder_bbp <- 2.058 * data_yday[grep('555', parm),,,] - .00182
+    
+    # morel_bbp - chlor_a
+    # (.3 * pow(chlor_a, .62) * (.002 + .02 * (.5 - .25 * log10(chlor_a))))
+    morel_bbp <- .3 * (data_yday[grep('chlor_a', parm),,,]^.62) * (.002 + .02 * (.5 - .25 * log10(data_yday[grep('chlor_a', parm),,,])))
+    
+    ### Carder to Morel ratio
+    cm_bbp <- carder_bbp / morel_bbp
     
     # chlor_a anomaly
     chl_yday <- data_yday[grep('chlor_a', parm),,,]
-    chl_yday <- abind(chl_yday,data_previous[1,,,],along=3)
+    chl_yday <- abind(data_previous[grep('chlor_a', parm),,,],chl_yday,along=3)
     chl_anom2 <- array(NA,c(length(lon2),length(lat2),dim(data_yday)[4]))
-    n <- 1
-    for(k in 76:dim(chl_yday)[3]){
-      ### 15 day lagged anomaly of 60 day mean
-      lm_60d <- apply(chl_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
-      chl_anom2[,,n] <- chl_yday[,,k] - lm_60d
-      n <- n + 1
-      rm(lm_60d)
-    }
-    
     # nflh anomaly
     nflh_yday <- data_yday[grep('nflh', parm),,,]
-    nflh_yday <- abind(nflh_yday,data_previous[1,,,],along=3)
+    nflh_yday <- abind(data_previous[grep('nflh', parm),,,],nflh_yday,along=3)
     nflh_anom2 <- array(NA,c(length(lon2),length(lat2),dim(data_yday)[4]))
-    n <- 1
-    for(k in 76:dim(nflh_yday)[3]){
+    n <- 1 #counter
+    for(k in 76:dim(chl_yday)[3]){
       ### 15 day lagged anomaly of 60 day mean
-      lm_60d <- apply(nflh_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
-      nflh_anom2[,,n] <- nflh_yday[,,k] - lm_60d
+      # chlor_A
+      chl_lm_60d <- apply(chl_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
+      chl_anom2[,,n] <- chl_yday[,,k] - chl_lm_60d
+      # nflh
+      nflh_lm_60d <- apply(nflh_yday[,,(k-75):(k-16)],c(1,2),mean,na.rm=T)
+      nflh_anom2[,,n] <- nflh_yday[,,k] - nflh_lm_60d
       n <- n + 1
-      rm(lm_60d)
+      rm(chl_lm_60d,nflh_lm_60d)
     }
     
     data_out[1,,,] <- data_yday[grep('chlor_a', parm),,,]
@@ -141,55 +139,45 @@ t1 <- system.time(
     data_out[3,,,] <- data_yday[grep('nflh', parm),,,]
     data_out[4,,,] <- nflh_anom2
     data_out[5,,,] <- data_yday[grep('Rrs_667', parm),,,]
-    data_out[6,,,] <- abi
-    data_out[7,,,] <- bbp_carder
-    data_out[8,,,] <- bbp_morel
-    data_out[9,,,] <- ssnlw488
-    data_out[10,,,] <- rbd
-    data_out[11,,,] <- kbbi
+    data_out[6,,,] <- ssnlw488
+    data_out[7,,,] <- carder_bbp
+    data_out[8,,,] <- morel_bbp
+    data_out[9,,,] <- cm_bbp
+    data_out[10,,,] <- abi
+    data_out[11,,,] <- rbd
+    data_out[12,,,] <- kbbi
     
     saveRDS(data_out,paste0('aqua_modis_daily_input_',yr,'_4km.rds')) # netcdf is smaller and contains metadata 
-    rm(data_yday,data_previous,begin,last,data_out,chl_anom2,chl_yday,nflh_anom2,nflh_yday,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,nlw_443,nlw_488,nlw_531,nlw_667,nlw_678)
+    rm(data_yday,data_previous,begin,last,data_out,chl_anom2,chl_yday,nflh_anom2,nflh_yday,abi,carder_bbp,morel_bbp,cm_bbp,ssnlw488,rbd,kbbi,nlw_443,nlw_488,nlw_531,nlw_667,nlw_678)
     # gc()
     setTxtProgressBar(pb, yr-2002)
   }
 )
 t1
 
-### what are the output variables of interest?
-# chlor_a
-# chl_anom
-# nflh
-# nflh_anom
-# rrs_667
-# ABI
-# bbp_Morel
-# bbp_Carder
-# ssnlw488
-# RBD
-# KBBI
-
-parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi')
+### what are the output variables?
+parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','ssnlw488','carder_bbp','morel_bbp','cm_bbp','abi','rbd','kbbi')
 
 
-### Carder to Morel ratio
-
-pb <- txtProgressBar(min = 0, max = length(2003:2021), style = 3)
-t1 <- system.time(
-  for(yr in 2003:2021){
-    setwd('~/Documents/nasa/data/lowres_4km')
-    # data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
-    data_yday <- readRDS(paste0('aqua_modis_daily_input_',yr,'_4km.rds'))
-    
-    cm_bbp <- data_yday[grep('carder',parm_out),,,]/data_yday[grep('morel',parm_out),,,]
-    
-    new_data <- abind(data_yday,cm_bbp,along=1)
-    setwd('~/Documents/nasa/data')
-    saveRDS(new_data,paste0('aqua_modis_daily_input_',yr,'_4km.rds')) # netcdf is smaller and contains metadata
-    
-    setTxtProgressBar(pb, yr-2002)
-    rm(data_yday,cm_bbp,new_data)
-  }
-)
-
-parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi','cm_bbp')
+### updated code 2022/12/12 to fix nflh_anom calculation and include cm_bbp
+# ### Carder to Morel ratio
+# 
+# pb <- txtProgressBar(min = 0, max = length(2003:2021), style = 3)
+# t1 <- system.time(
+#   for(yr in 2003:2021){
+#     setwd('~/Documents/nasa/data/lowres_4km')
+#     # data_yday <- readRDS(paste0('modisa_daily_',yr,'.rds'))
+#     data_yday <- readRDS(paste0('aqua_modis_daily_input_',yr,'_4km.rds'))
+#     
+#     cm_bbp <- data_yday[grep('carder',parm_out),,,]/data_yday[grep('morel',parm_out),,,]
+#     
+#     new_data <- abind(data_yday,cm_bbp,along=1)
+#     setwd('~/Documents/nasa/data')
+#     saveRDS(new_data,paste0('aqua_modis_daily_input_',yr,'_4km.rds')) # netcdf is smaller and contains metadata
+#     
+#     setTxtProgressBar(pb, yr-2002)
+#     rm(data_yday,cm_bbp,new_data)
+#   }
+# )
+# 
+# parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','abi','bbp_carder','bbp_morel','ssnlw488','rbd','kbbi','cm_bbp')
