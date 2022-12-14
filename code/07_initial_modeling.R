@@ -98,12 +98,12 @@ plot(dend)
 # https://stats.stackexchange.com/questions/41443/how-to-actually-plot-a-sample-tree-from-randomforestgettree
 # https://cran.rstudio.com/web/packages/randomForestExplainer/vignettes/randomForestExplainer.html
 set.seed(222)
-ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(.7, .3))
+ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(.5, .5))
 names(habs_covar_agg)[c(1:3,6:8)]
 habs_covar_agg$pa100k <- as.factor(habs_covar_agg$pa100k)
 train <- habs_covar_agg[ind==1,-c(1:3,6:8)] # remove all superfluous variables
 test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
-rf <- randomForest(pa100k~., data=train, proximity=T, importance=T, ntree=1, norm.votes = T, nodesize = 5) # norm.votes = F for combining trees
+rf <- randomForest(pa100k~., data=train, proximity=T, importance=T) # norm.votes = F for combining trees
 
 
 set.seed(222)
