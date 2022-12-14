@@ -29,6 +29,8 @@ habs <- habs[order(habs$date),]
 # table(habs$year)
 # table(habs$year,habs$month)
 # table(habs$year,habs$week)
+### proportion positive
+length(which(habs$CELLCOUNT>1e5))/nrow(habs)
 
 ### modis derived parms
 parm_out <- c('chlor_a','chl_anom','nflh','nflh_anom','rrs_667','ssnlw488','carder_bbp','morel_bbp','cm_bbp','abi','rbd','kbbi')
@@ -171,11 +173,11 @@ plot(habs$date,habs$CELLCOUNT+1,log='y')
 
 
 ### alternative; does not change pa100k values
-habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,abi,bbp_carder,bbp_morel,ssnlw488,rbd,kbbi,cm_bbp,sst,year,month,yday,week)~ygm,
+habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygm,
                          data=habs_reduce,mean,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,quantile,.9,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,
-                         function(x){if(length(x)<5){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
+                         function(x){if(length(x)<3){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
 habs_agg2.3 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,length)
 habs_agg2 <- merge(habs_agg2.1,habs_agg2.2,by=c('ygm'),all.x=T)
 habs_agg2$date <- as.Date(habs_agg2$yday-1,origin=paste0(habs_agg2$year,'-01-01'))

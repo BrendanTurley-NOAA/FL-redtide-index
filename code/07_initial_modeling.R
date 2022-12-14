@@ -13,6 +13,11 @@ setwd('~/Documents/nasa/data/lowres_4km')
 habs_covar_agg <- read.csv('habs_covariates_agg.csv')
 habs_covar_agg$date <- ymd(habs_covar_agg$date)
 
+### proportion positive
+length(which(habs_covar_agg$pa100k==1))/nrow(habs_covar_agg)
+# 0.06695985
+# 0.06604714 'raw' FWC dataset proportion positive
+
 plot(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==0)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==0)],asp=1,pch=20,cex=.7)
 points(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==1)],habs_covar_agg$LATITUDE[which(habs_covar_agg$pa100k==1)],col=4,pch=20,cex=.7)
 
@@ -208,11 +213,11 @@ for(i in c(4:5,9:25,27)){
   mtext(names(habs_covar_agg)[i])
 }
 
-mod0 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+bbp_morel+bbp_carder+abi+rrs_667,
+mod0 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+nflh_anom+ssnlw488+cm_bbp+morel_bbp+carder_bbp+abi+rrs_667,
             data=habs_covar_agg,family=binomial(link='logit'))
 summary(mod0)
 anova(mod0,test='Chisq')
-mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+ssnlw488+cm_bbp+bbp_carder+abi,
+mod1 <- glm(pa100k~as.factor(month)+chlor_a+chl_anom+rbd+nflh+ssnlw488+cm_bbp+carder_bbp+abi,
             data=habs_covar_agg,family=binomial(link='logit'))
 summary(mod1)
 anova(mod1,test='Chisq')
@@ -261,13 +266,13 @@ Threshold=roctable[roctable[,4] == max(roctable[,4]),][3]
 Threshold 
 # [1] 0.07898927
 TT=table(mod1$fitted>Threshold, habs_covar_agg$pa100k)
-#          0     1
-# FALSE 13108   621
-# TRUE  11104  1450
+#           0     1
+# FALSE 32116   809
+# TRUE   7346  2023
 FPR =  TT[2,1]/sum(TT[ ,1 ]) 
 FNR =   TT[1,2]/sum(TT[ ,2 ])    
-FPR # 0.4586156
-FNR # 0.2998551
+FPR # 0.1861538
+FNR # 0.2856638
 
 yr <- 2005
 subset <- habs_covar_agg[which(habs_covar_agg$year==yr ),]
