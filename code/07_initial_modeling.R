@@ -97,33 +97,48 @@ plot(dend)
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
 # https://stats.stackexchange.com/questions/41443/how-to-actually-plot-a-sample-tree-from-randomforestgettree
 # https://cran.rstudio.com/web/packages/randomForestExplainer/vignettes/randomForestExplainer.html
-
 set.seed(222)
-ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(0.7, 0.3))
+ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(.7, .3))
 names(habs_covar_agg)[c(1:3,6:8)]
 habs_covar_agg$pa100k <- as.factor(habs_covar_agg$pa100k)
 train <- habs_covar_agg[ind==1,-c(1:3,6:8)] # remove all superfluous variables
 test <- habs_covar_agg[ind==2,-c(1:3,6:8)]
+rf <- randomForest(pa100k~., data=train, proximity=T, importance=T, ntree=1, norm.votes = T, nodesize = 5) # norm.votes = F for combining trees
+
+
+set.seed(222)
+ind <- sample(3, nrow(habs_covar_agg), replace = TRUE, prob = c(.35,.35, .3))
+names(habs_covar_agg)[c(1:3,6:8)]
+habs_covar_agg$pa100k <- as.factor(habs_covar_agg$pa100k)
+train <- habs_covar_agg[ind==1,-c(1:3,6:8)] # remove all superfluous variables
+train2 <- habs_covar_agg[ind==2,-c(1:3,6:8)]
+test <- habs_covar_agg[ind==3,-c(1:3,6:8)]
 
 # rf <- randomForest(pa100k~LATITUDE+LONGITUDE+chlor_a+chl_anom+nflh+nflh_anom+rrs_667+abi+bbp_carder+bbp_morel+ssnlw488+rbd+kbbi+cm_bbp+sst+year+month+yday+week+depth_m,data=train, proximity=T, importance=T)
-rf <- randomForest(pa100k~., data=train, proximity=T, importance=T)
+remove <- sample(nrow(train2),nrow(train2)-nrow(train),replace=F)
+train2 <- train2[-remove,]
+rf1 <- randomForest(pa100k~., data=train, proximity=T, importance=T, norm.votes = F) # norm.votes = F for combining trees
+rf2 <- randomForest(pa100k~., data=train2, proximity=T, importance=T, norm.votes = F)
+rf.all <- combine(rf1, rf2)
 # Error: vector memory exhausted (limit reached?)
 # https://stackoverflow.com/questions/17052436/does-random-forest-in-r-have-a-limitation-of-size-of-training-data
 setwd('~/Documents/nasa/data/lowres_4km')
 save(rf, file = "randomForest_initial.RData")
 # load('randomForest_initial.RData')
 print(rf)
+print(rf2)
+print(rf.all)
 # print(object.size(rf),units='Mb')
-hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
-plot(randomForest::margin(rf),sort=T)
+hist(treesize(rf.all),main = "No. of Nodes for the Trees",col = "green")
+plot(randomForest::margin(rf.all),sort=T)
 ### tune
 rf_tune <- tuneRF(train[,-20],  train[,20],
                   stepFactor = 2, plot = TRUE, ntreeTry = 150, trace = TRUE, improve = .05)
 
 # https://topepo.github.io/caret/measuring-performance.html
-p1 <- predict(rf, train)
+p1 <- predict(rf.all, train)
 confusionMatrix(p1, train$pa100k,positive='1')
-p2 <- predict(rf, test)
+p2 <- predict(rf.all, test)
 tabs <- addmargins(table(p2,test$pa100k))
 tabs
 error_mat <- confusionMatrix(p2, test$pa100k, positive='1', mode='everything')
@@ -133,11 +148,11 @@ error_mat$byClass # F1 out of 1; https://en.wikipedia.org/wiki/F-score; https://
 tabs[1,2]/tabs[3,2] # FNR or 1 - sensitivity
 tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
 
-plot(rf,log='y')
+plot(rf.all,log='y')
 legend('topright',c('OOB','Neg','Pos'),col=c(1,2,3),lty=1)
 
 ### ROC analysis
-p3 <- predict(rf, test, type='prob')
+p3 <- predict(rf.all, test, type='prob')
 temproc <- roc(test$pa100k , p3[,2], plot=TRUE, grid=TRUE)
 # CALCULATE AREA UNDER THE CURVE
 temproc$auc  
@@ -151,7 +166,7 @@ plot(subset$LONGITUDE,subset$LATITUDE,asp=1)
 quilt.plot(subset$LONGITUDE,subset$LATITUDE,phat1,col=plasma(60),asp=1,add=T)
 
 
-var_imp <- importance(rf,scale=T)
+var_imp <- importance(rf.all,scale=T)
 var_imp
 par(mar=c(4,7,1,1))
 barplot(sort(var_imp[,1]),las=1,horiz=T,main='Importance (absence)')
@@ -162,12 +177,12 @@ plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecre
 text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
 
 png('rti_rf_varimp.png',width=9,height=7,pointsize=12,unit='in',res=300)
-varImpPlot(rf,
+varImpPlot(rf.all,
            sort = T,
            main = "Variable Importance")
 dev.off()
 
-var_imp2 <- varImp(rf,scale=T)
+var_imp2 <- varImp(rf.all,scale=T)
 barplot(sort(var_imp2[,2]),names.arg = rownames(var_imp2)[order(var_imp2[,2])],las=2,horiz=T)
 
 par(mfrow=c(2,2))
