@@ -175,6 +175,7 @@ plot(habs$date,habs$CELLCOUNT+1,log='y')
 ### alternative; does not change pa100k values
 habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygm,
                          data=habs_reduce,mean,na.rm=T)
+habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,max,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,quantile,.9,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,
                          function(x){if(length(x)<3){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
