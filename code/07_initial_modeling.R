@@ -24,6 +24,7 @@ points(habs_covar_agg$LONGITUDE[which(habs_covar_agg$pa100k==1)],habs_covar_agg$
 ### plot data
 look <- habs_covar_agg[,-c(1:8,22:26)]
 
+pdf('rti_inputs_tsyr.pdf',width=9,height=7,pointsize=12)
 par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$date,look[,i],
@@ -31,13 +32,15 @@ for(i in 1:ncol(look)){
        pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
   abline(v=as.Date(paste0(2000:2022,'-01-01')),lty=5,col='gray50')
   abline(h=0,lty=5,col='gray70')
-  sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.6)
+  sp <- smooth.spline(habs_covar_agg$date,look[,i],spar=.3)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
   axis(1,as.Date(paste0(seq(2000,2022,1),'-01-01')),seq(2000,2022,1),las=2)
 }
+dev.off()
 
 dates <- data.frame(date=seq(as.Date('2003-01-01'),as.Date('2003-12-31'),'day'),yday=yday(seq(as.Date('2003-01-01'),as.Date('2003-12-31'),'day')))
 ind <- which(day(dates$date)==1)
+pdf('rti_inputs_tsjd.pdf',width=9,height=7,pointsize=12)
 par(mfrow=c(2,1),mar=c(4,4,1,1))
 for(i in 1:ncol(look)){
   plot(habs_covar_agg$yday,look[,i],
@@ -45,10 +48,11 @@ for(i in 1:ncol(look)){
        pch=20,col=alpha(1,.1),cex=.8,xaxt='n')
   abline(v=ind,lty=5,col='gray50') 
   abline(h=0,lty=5,col='gray70')
-  sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.6)
+  sp <- smooth.spline(habs_covar_agg$yday,look[,i],spar=.3)
   points(sp$x,sp$y,col=2,typ='l',lwd=2)
   axis(1,ind,month.abb[1:12])
 }
+dev.off()
 
 res <- p_val <- matrix(NA,ncol(look),ncol(look))
 for(i in 1:ncol(look)){
@@ -71,12 +75,15 @@ pos <- lm_pos(length(which(brks>0)))
 res2 <- res
 res2[lower.tri(res2,diag=T)] <- NA
 
-par(mar=c(1,6,6,3),pin=c(3,3))
+png('rti_inputs_corr.png',width=9,height=9,res=300,units='in')
+par(mar=c(1,6,6,3),pin=c(6,6))
 imagePlot(1:14,1:14,res2,
           breaks=brks,col=c(neg,pos),
-          xaxt='n',yaxt='n',xlab='',ylab='',asp=1)
+          xaxt='n',yaxt='n',xlab='',ylab='',asp=1,
+          legend.lab = 'Correlation')
 axis(2,2:14,names(look)[-1],las=1)
 axis(3,1:13,names(look)[-14],las=2)
+dev.off()
 
 sort(rowSums(abs(res)))
 
@@ -86,7 +93,10 @@ clust <- hclust(as.dist(1-res))
 plot(clust)
 
 dend <- as.dendrogram(clust)
+
+png('rti_inputs_dend.png',width=9,height=9,res=300,units='in')
 plot(dend)
+dev.off()
 
 # pca1 <- princomp(look)
 # loadings(pca1)
