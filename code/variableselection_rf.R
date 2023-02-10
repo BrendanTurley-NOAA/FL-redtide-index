@@ -1,3 +1,5 @@
+# https://daviddalpiaz.github.io/r4sl/ensemble-methods.html#tuning-1
+
 gc()
 
 library(caret)
@@ -45,6 +47,33 @@ error_mat$byClass # F1 out of 1; https://en.wikipedia.org/wiki/F-score; https://
 ### 2022/12/07 - there is a high specificity (few false positives) and low sensitivity (many false negatives); the opposite of what is desired
 tabs[1,2]/tabs[3,2] # FNR or 1 - sensitivity
 tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
+
+
+error_analysis <- data.frame(true=test$pa100k,prediction=p2)
+error_analysis$diff <- ifelse(error_analysis$true==error_analysis$prediction,1,0)
+errors <- cbind(error_analysis,test)
+errors <- errors[,-c(1:2,17)]
+errors <- cbind(error_analysis,test)
+error_tree <- partykit::ctree(diff~., data=errors)
+
+er_cl <- rep(NA,nrow(error_analysis))
+er_cl[which(error_analysis$true==0 & error_analysis$prediction==0)] <- 'TN'
+er_cl[which(error_analysis$true==0 & error_analysis$prediction==1)] <- 'FP'
+er_cl[which(error_analysis$true==1 & error_analysis$prediction==0)] <- 'FN'
+er_cl[which(error_analysis$true==1 & error_analysis$prediction==1)] <- 'TP'
+errors <- cbind(error_analysis,er_cl,test)
+errors <- errors[,-c(1:3,18)]
+errors$er_cl <- as.factor(errors$er_cl)
+error_tree <- partykit::ctree(er_cl~., data=errors)
+
+error_tree
+setwd('~/Downloads')
+png('error_tree_3.png',width=80,height=15,units='in',res=300)
+plot(error_tree,type='simple')
+dev.off()
+
+plot(error_tree,type='simple')
+node_boxplot(error_tree)
 
 plot(rf,log='y')
 legend('topright',c('OOB','Neg','Pos'),col=c(1,2,3),lty=1)
