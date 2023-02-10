@@ -49,6 +49,29 @@ tabs[1,2]/tabs[3,2] # FNR or 1 - sensitivity
 tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
 
 
+######## logistic ######## 
+log_mod <- glm(pa100k~., data=train, family='binomial')
+
+log_preds <- predict(log_mod,train,type='response')
+
+### ROC analysis
+p3 <- predict(log_mod, train, type='response')
+temproc <- roc(train$pa100k , p3, plot=TRUE, grid=TRUE)
+# CALCULATE AREA UNDER THE CURVE
+temproc$auc  
+
+roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
+                  temproc$sensitivities+temproc$specificities)
+Threshold <- roctable[roctable[,4] == max(roctable[,4]),][3]
+Threshold 
+
+p2.1 <- ifelse(log_preds>Threshold,1,0)
+p2.1 <- as.factor(p2.1)
+error_mat2 <- confusionMatrix(p2.1, train$pa100k, positive='1', mode='everything')
+error_mat2
+######## logistic ######## 
+
+
 error_analysis <- data.frame(true=test$pa100k,prediction=p2)
 error_analysis$diff <- ifelse(error_analysis$true==error_analysis$prediction,1,0)
 errors <- cbind(error_analysis,test)
@@ -66,6 +89,14 @@ errors <- errors[,-c(1:3,18)]
 errors$er_cl <- as.factor(errors$er_cl)
 error_tree <- partykit::ctree(er_cl~., data=errors)
 
+setwd('~/Downloads')
+pdf('errors_box.pdf',width=7,height=11,pointsize = 12,useDingbats = T)
+par(mfrow=c(2,2))
+for(i in 2:15){
+  boxplot(errors[,i]~errors$er_cl,ylab=paste(names(errors)[i]))
+}
+dev.off()
+
 error_tree
 setwd('~/Downloads')
 png('error_tree_3.png',width=80,height=15,units='in',res=300)
@@ -74,6 +105,24 @@ dev.off()
 
 plot(error_tree,type='simple')
 node_boxplot(error_tree)
+
+library(rpart)
+library(rpart.plot)
+
+tree <- rpart(survived~., data=TitanicData, cp=.02)
+error_tree2 <- rpart(diff~., data=errors, cp=.001)
+error_tree2 <- rpart(er_cl~., data=errors, cp=.002)
+
+plot(error_tree2)
+summary(error_tree2)
+
+setwd('~/Downloads')
+png('error_tree_4.png',width=20,height=15,units='in',res=300)
+rpart.plot(error_tree2)
+dev.off()
+
+
+fn <- errors[which(errors$er_cl=='FN'),]
 
 plot(rf,log='y')
 legend('topright',c('OOB','Neg','Pos'),col=c(1,2,3),lty=1)
@@ -103,11 +152,11 @@ legend('bottomright',c('absence','presence'),fill=c('gray20','gray80'),bty='n')
 plot(var_imp[,3],var_imp[,4],typ='n',xlab='MeanDecreaseAccuracy',ylab='MeanDecreaseGini')
 text(var_imp[,3],var_imp[,4],row.names(var_imp),cex=.8)
 
-# png('rti_rf_varimp.png',width=9,height=7,pointsize=12,unit='in',res=300)
+png('rti_rf_varimp.png',width=9,height=7,pointsize=12,unit='in',res=300)
 varImpPlot(rf,
            sort = T, scale = F,
            main = "Variable Importance")
-# dev.off()
+dev.off()
 
 var_imp2 <- varImp(rf,scale=F)
 barplot(sort(var_imp2[,2]),names.arg = rownames(var_imp2)[order(var_imp2[,2])],las=2,horiz=T)
