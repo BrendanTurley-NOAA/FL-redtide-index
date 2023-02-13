@@ -51,9 +51,6 @@ tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
 
 ######## logistic ######## 
 log_mod <- glm(pa100k~., data=train, family='binomial')
-
-log_preds <- predict(log_mod,train,type='response')
-
 ### ROC analysis
 p3 <- predict(log_mod, train, type='response')
 temproc <- roc(train$pa100k , p3, plot=TRUE, grid=TRUE)
@@ -64,6 +61,8 @@ roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$threshol
                   temproc$sensitivities+temproc$specificities)
 Threshold <- roctable[roctable[,4] == max(roctable[,4]),][3]
 Threshold 
+# coords(temproc, "best", ret = "threshold") # same as above
+
 
 p2.1 <- ifelse(log_preds>Threshold,1,0)
 p2.1 <- as.factor(p2.1)
