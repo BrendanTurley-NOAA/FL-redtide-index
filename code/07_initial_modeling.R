@@ -8,6 +8,13 @@ library(pROC)
 library(randomForest)
 library(scales)
 
+ind2sub <- function(ind,a){
+  m <- nrow(a)
+  r <- ((ind-1) %% m) + 1
+  c <- floor((ind-1) / m) + 1
+  return(cbind(r,c))
+}
+
 setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 habs_covar_agg <- read.csv('habs_covariates_agg.csv')
@@ -75,6 +82,9 @@ pos <- lm_pos(length(which(brks>0)))
 res2 <- res
 res2[lower.tri(res2,diag=T)] <- NA
 
+pos_c <- ind2sub(which(res2>=.6),res2)
+neg_c <- ind2sub(which(res2<=-.6),res2)
+
 png('rti_inputs_corr.png',width=9,height=9,res=300,units='in')
 par(mar=c(1,6,6,3),pin=c(6,6))
 imagePlot(1:14,1:14,res2,
@@ -83,6 +93,8 @@ imagePlot(1:14,1:14,res2,
           legend.lab = 'Correlation')
 axis(2,2:14,names(look)[-1],las=1)
 axis(3,1:13,names(look)[-14],las=2)
+points(pos_c,pch=4)
+points(neg_c,pch=4)
 dev.off()
 
 sort(rowSums(abs(res)))
