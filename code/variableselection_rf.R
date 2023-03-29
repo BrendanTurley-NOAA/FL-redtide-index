@@ -1,5 +1,5 @@
 # https://daviddalpiaz.github.io/r4sl/ensemble-methods.html#tuning-1
-
+rm(list=ls())
 gc()
 
 library(caret)
@@ -10,12 +10,16 @@ library(party)
 library(partykit)
 library(pROC)
 library(randomForest)
+library(rpart)
+library(rpart.plot)
 library(scales)
 
 setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 # habs_covar_agg <- read.csv('habs_covariates_agg.csv')
-habs_covar_agg <- read.csv('habs_covariates_agg_v2.csv')
+# habs_covar_agg <- read.csv('habs_covariates_agg_v2.csv')
+habs_covar_agg <- read.csv('habs_covariates_agg_v2_3m.csv')
+# habs_covar_agg <- read.csv('habs_covariates_agg_v2_5m.csv')
 habs_covar_agg$date <- ymd(habs_covar_agg$date)
 
 ### random forest
@@ -50,30 +54,7 @@ tabs[1,2]/tabs[3,2] # FNR or 1 - sensitivity
 tabs[2,1]/tabs[3,1] # FPR or 1 - specificity
 
 
-######## logistic ######## 
-log_mod <- glm(pa100k~., data=train, family='binomial')
-### ROC analysis
-p3 <- predict(log_mod, train, type='response')
-temproc <- roc(train$pa100k , p3, plot=TRUE, grid=TRUE)
-# CALCULATE AREA UNDER THE CURVE
-temproc$auc  
-
-roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
-                  temproc$sensitivities+temproc$specificities)
-Threshold <- roctable[roctable[,4] == max(roctable[,4]),][3]
-Threshold 
-# coords(temproc, "best", ret = "threshold") # same as above
-
-log_preds <- predict(log_mod, test, type='response')
-p2.1 <- ifelse(log_preds>Threshold,1,0)
-p2.1 <- as.factor(p2.1)
-tabs <- addmargins(table(p2.1,test$pa100k))
-tabs
-error_mat2 <- confusionMatrix(p2.1, test$pa100k, positive='1', mode='everything')
-error_mat2
-######## logistic ######## 
-
-
+######## error analysis RF ########
 error_analysis <- data.frame(true=test$pa100k,prediction=p2)
 error_analysis$diff <- ifelse(error_analysis$true==error_analysis$prediction,1,0)
 errors <- cbind(error_analysis,test)
@@ -99,23 +80,13 @@ for(i in 2:15){
 }
 dev.off()
 
-error_tree
 setwd('~/Downloads')
 png('error_tree_3.png',width=80,height=15,units='in',res=300)
 plot(error_tree,type='simple')
 dev.off()
 
-plot(error_tree,type='simple')
-node_boxplot(error_tree)
 
-library(rpart)
-library(rpart.plot)
-
-# tree <- rpart(survived~., data=TitanicData, cp=.02)
-# error_tree2 <- rpart(diff~., data=errors, cp=.001)
 error_tree2 <- rpart(er_cl~., data=errors, cp=.002)
-
-plot(error_tree2)
 summary(error_tree2)
 
 setwd('~/Downloads')
@@ -123,11 +94,53 @@ png('error_tree_4.png',width=20,height=15,units='in',res=300)
 rpart.plot(error_tree2)
 dev.off()
 
-
 fn <- errors[which(errors$er_cl=='FN'),]
 
 plot(rf,log='y')
 legend('topright',c('OOB','Neg','Pos'),col=c(1,2,3),lty=1)
+
+
+### what is the spatial distribution of errors?
+keeps <- c(4:5,8)
+names(habs_covar_agg)[keeps]
+keep <- habs_covar_agg[ind==2,keeps]
+nrow(keep)==nrow(errors)
+
+plot(keep$LONGITUDE[errors$er_cl=='FN'],keep$LATITUDE[errors$er_cl=='FN'],asp=1,pch=16,col=alpha(1,.2))
+plot(keep$LONGITUDE[errors$er_cl=='FP'],keep$LATITUDE[errors$er_cl=='FP'],asp=1,pch=16,col=alpha(1,.2))
+plot(keep$LONGITUDE[errors$er_cl=='TN'],keep$LATITUDE[errors$er_cl=='TN'],asp=1,pch=16,col=alpha(1,.2))
+plot(keep$LONGITUDE[errors$er_cl=='TP'],keep$LATITUDE[errors$er_cl=='TP'],asp=1,pch=16,col=alpha(1,.2))
+
+breaks=seq(.5,12.5,1)
+h1 <- hist(month(keep$date),breaks=breaks)
+par(mfrow=c(2,2))
+h4 <- hist(month(keep$date[errors$er_cl=='TN']),breaks=breaks)
+h2 <- hist(month(keep$date[errors$er_cl=='FN']),breaks=breaks)
+h3 <- hist(month(keep$date[errors$er_cl=='FP']),breaks=breaks)
+h5 <- hist(month(keep$date[errors$er_cl=='TP']),breaks=breaks)
+par(mfrow=c(2,2))
+barplot(h4$counts/h1$counts,names.arg = month.abb[1:12],las=1,main='Probabiltiy of true negative')
+barplot(h2$counts/h1$counts,names.arg = month.abb[1:12],las=1,main='Probabiltiy of false negative')
+barplot(h3$counts/h1$counts,names.arg = month.abb[1:12],las=1,main='Probabiltiy of false positive')
+barplot(h5$counts/h1$counts,names.arg = month.abb[1:12],las=1,main='Probabiltiy of true positive')
+par(mfrow=c(1,1))
+barplot(rbind(h2$counts/h1$counts,h5$counts/h1$counts),beside=T,
+        names.arg = month.abb[1:12],legend.text = c("FN", "TP"),args.legend=list(x='topright',bty='n'))
+barplot(rbind(h3$counts/h1$counts,h5$counts/h1$counts),beside=T,
+        names.arg = month.abb[1:12],legend.text = c("FP", "TP"),args.legend=list(x='topright',bty='n'))
+
+breaks=seq(2002.5,2021.5,1)
+h1 <- hist(year(keep$date),breaks=breaks)
+h2 <- hist(year(keep$date[errors$er_cl=='FN']),breaks=breaks,plot=F)
+h3 <- hist(year(keep$date[errors$er_cl=='FP']),breaks=breaks,plot=F)
+h4 <- hist(year(keep$date[errors$er_cl=='TN']),breaks=breaks,plot=F)
+h5 <- hist(year(keep$date[errors$er_cl=='TP']),breaks=breaks,plot=F)
+par(mfrow=c(2,2))
+barplot(h4$counts/h1$counts,names.arg = 2003:2021,las=1,main='Probabiltiy of true negative')
+barplot(h2$counts/h1$counts,names.arg = 2003:2021,las=1,main='Probabiltiy of false negative')
+barplot(h3$counts/h1$counts,names.arg = 2003:2021,las=1,main='Probabiltiy of false positive')
+barplot(h5$counts/h1$counts,names.arg = 2003:2021,las=1,main='Probabiltiy of true positive')
+######## error analysis RF ########
 
 ### ROC analysis
 p3 <- predict(rf, test, type='prob')
@@ -135,6 +148,7 @@ temproc <- roc(test$pa100k , p3[,2], plot=TRUE, grid=TRUE)
 # CALCULATE AREA UNDER THE CURVE
 temproc$auc  
 
+### plot some predictions
 yr <- 2005
 subset <- test[which(test$year==yr ),]
 phat1 <- p3[,2][which(test$year==yr )]
@@ -183,8 +197,32 @@ for (i in seq_along(ind_var)) {
 # dev.off()
 
 
+######## logistic ######## 
+log_mod <- glm(pa100k~., data=train, family='binomial')
+### ROC analysis
+p3 <- predict(log_mod, train, type='response')
+temproc <- roc(train$pa100k , p3, plot=TRUE, grid=TRUE)
+# CALCULATE AREA UNDER THE CURVE
+temproc$auc  
+
+roctable <- cbind(temproc$sensitivities, temproc$specificities, temproc$thresholds, 
+                  temproc$sensitivities+temproc$specificities)
+Threshold <- roctable[roctable[,4] == max(roctable[,4]),][3]
+Threshold 
+# coords(temproc, "best", ret = "threshold") # same as above
+
+log_preds <- predict(log_mod, test, type='response')
+p2.1 <- ifelse(log_preds>Threshold,1,0)
+p2.1 <- as.factor(p2.1)
+tabs <- addmargins(table(p2.1,test$pa100k))
+tabs
+error_mat2 <- confusionMatrix(p2.1, test$pa100k, positive='1', mode='everything')
+error_mat2
+######## logistic ######## 
 
 
+
+### alternative random forest
 set.seed(222)
 ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(.55, .45))
 names(habs_covar_agg)[c(1:3,6:8)]

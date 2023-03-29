@@ -207,13 +207,35 @@ habs_agg$lon_m <- cut(habs_agg$LONGITUDE,vec_brk(lon_modis))
 habs_agg$lat_m <- cut(habs_agg$LATITUDE,vec_brk(lat_modis))
 ### add bathymetry
 habs_covar_agg <- merge(habs_agg,bathy[,-c(1,2)],by=c('lon_m','lat_m'),all.x=T) # don't include superfluous lon/lats
+### remove shallow water samples
 # habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m>2),] # remove samples taken at altitude greater than 2 m
-habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m>(-1)),] # updated 2023/03/28 to remove shallow water samples
-habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m<(-200)),] # remove samples taken at locations with depth greater than 200 m
-plot(habs_covar_agg$LONGITUDE,habs_covar_agg$LATITUDE,asp=1,pch='.')
-
+# updated 2023/03/28 to remove shallow water samples; remove samples taken at locations with depth greater than 200 m
+habs_covar_agg1 <- habs_covar_agg[-which(habs_covar_agg$depth_m>(-1) |
+                                           habs_covar_agg$depth_m<(-200)),]
 setwd('~/Documents/nasa/data/lowres_4km')
-write.csv(habs_covar_agg,'habs_covariates_agg_v2.csv',row.names = F)
+write.csv(habs_covar_agg1,'habs_covariates_agg_v2.csv',row.names = F)
+
+habs_covar_agg2 <- habs_covar_agg[-which(habs_covar_agg$depth_m>(-2) |
+                                           habs_covar_agg$depth_m<(-200)),]
+setwd('~/Documents/nasa/data/lowres_4km')
+write.csv(habs_covar_agg2,'habs_covariates_agg_v2_2m.csv',row.names = F)
+
+habs_covar_agg3 <- habs_covar_agg[-which(habs_covar_agg$depth_m>(-3) |
+                                           habs_covar_agg$depth_m<(-200)),]
+setwd('~/Documents/nasa/data/lowres_4km')
+write.csv(habs_covar_agg3,'habs_covariates_agg_v2_3m.csv',row.names = F)
+
+habs_covar_agg4 <- habs_covar_agg[-which(habs_covar_agg$depth_m>(-5) |
+                                           habs_covar_agg$depth_m<(-200)),]
+setwd('~/Documents/nasa/data/lowres_4km')
+write.csv(habs_covar_agg4,'habs_covariates_agg_v2_5m.csv',row.names = F)
+
+plot(habs_covar_agg1$LONGITUDE,habs_covar_agg1$LATITUDE,asp=1,pch='.',col=2)
+points(habs_covar_agg2$LONGITUDE,habs_covar_agg2$LATITUDE,asp=1,pch='.',col=3)
+points(habs_covar_agg3$LONGITUDE,habs_covar_agg3$LATITUDE,asp=1,pch='.',col=4)
+points(habs_covar_agg4$LONGITUDE,habs_covar_agg4$LATITUDE,asp=1,pch='.')
+
+
 
 test <- na.omit(habs_covar_agg)
 dim(test)==dim(habs_covar_agg) ### should be true
