@@ -14,7 +14,8 @@ library(scales)
 
 setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
-habs_covar_agg <- read.csv('habs_covariates_agg.csv')
+# habs_covar_agg <- read.csv('habs_covariates_agg.csv')
+habs_covar_agg <- read.csv('habs_covariates_agg_v2.csv')
 habs_covar_agg$date <- ymd(habs_covar_agg$date)
 
 ### random forest
@@ -63,10 +64,12 @@ Threshold <- roctable[roctable[,4] == max(roctable[,4]),][3]
 Threshold 
 # coords(temproc, "best", ret = "threshold") # same as above
 
-
+log_preds <- predict(log_mod, test, type='response')
 p2.1 <- ifelse(log_preds>Threshold,1,0)
 p2.1 <- as.factor(p2.1)
-error_mat2 <- confusionMatrix(p2.1, train$pa100k, positive='1', mode='everything')
+tabs <- addmargins(table(p2.1,test$pa100k))
+tabs
+error_mat2 <- confusionMatrix(p2.1, test$pa100k, positive='1', mode='everything')
 error_mat2
 ######## logistic ######## 
 
@@ -108,8 +111,8 @@ node_boxplot(error_tree)
 library(rpart)
 library(rpart.plot)
 
-tree <- rpart(survived~., data=TitanicData, cp=.02)
-error_tree2 <- rpart(diff~., data=errors, cp=.001)
+# tree <- rpart(survived~., data=TitanicData, cp=.02)
+# error_tree2 <- rpart(diff~., data=errors, cp=.001)
 error_tree2 <- rpart(er_cl~., data=errors, cp=.002)
 
 plot(error_tree2)
