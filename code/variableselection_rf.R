@@ -18,9 +18,10 @@ setwd('~/Documents/nasa/data/lowres_4km')
 # write.csv(habs_covar_agg,'habs_covariates_agg.csv',row.names = F)
 # habs_covar_agg <- read.csv('habs_covariates_agg.csv')
 # habs_covar_agg <- read.csv('habs_covariates_agg_v2.csv')
-habs_covar_agg <- read.csv('habs_covariates_agg_v2_3m.csv')
-# habs_covar_agg <- read.csv('habs_covariates_agg_v2_5m.csv')
+# habs_covar_agg <- read.csv('habs_covariates_agg_v2_3m.csv')
+habs_covar_agg <- read.csv('habs_covariates_agg_v2_5m.csv')
 habs_covar_agg$date <- ymd(habs_covar_agg$date)
+length(which(year(habs_covar_agg$date)>=2012))/nrow(habs_covar_agg)
 
 ### random forest
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
@@ -28,6 +29,7 @@ habs_covar_agg$date <- ymd(habs_covar_agg$date)
 # https://cran.rstudio.com/web/packages/randomForestExplainer/vignettes/randomForestExplainer.html
 set.seed(222)
 ind <- sample(2, nrow(habs_covar_agg), replace = TRUE, prob = c(.55, .45))
+ind <- ifelse(year(habs_covar_agg$date)>=2013,1,2)
 # ind_rm <- c(1:3,6:8)
 ind_rm <- c(1:8,22:25) # alternative removal of 'climatological' variables
 names(habs_covar_agg)[ind_rm]
@@ -43,7 +45,8 @@ hist(treesize(rf),main = "No. of Nodes for the Trees",col = "green")
 # https://topepo.github.io/caret/measuring-performance.html
 p1 <- predict(rf, train)
 confusionMatrix(p1, train$pa100k,positive='1')
-p2 <- predict(rf, test)
+p2 <- predict(rf, test, type='response')
+p3 <- predict(rf, test, type='prob')
 tabs <- addmargins(table(p2,test$pa100k))
 tabs
 error_mat <- confusionMatrix(p2, test$pa100k, positive='1', mode='everything')
@@ -84,7 +87,6 @@ setwd('~/Downloads')
 png('error_tree_3.png',width=80,height=15,units='in',res=300)
 plot(error_tree,type='simple')
 dev.off()
-
 
 error_tree2 <- rpart(er_cl~., data=errors, cp=.002)
 summary(error_tree2)
@@ -128,6 +130,8 @@ barplot(rbind(h2$counts/h1$counts,h5$counts/h1$counts),beside=T,
         names.arg = month.abb[1:12],legend.text = c("FN", "TP"),args.legend=list(x='topright',bty='n'))
 barplot(rbind(h3$counts/h1$counts,h5$counts/h1$counts),beside=T,
         names.arg = month.abb[1:12],legend.text = c("FP", "TP"),args.legend=list(x='topright',bty='n'))
+barplot(rbind(h2$counts/h1$counts,h3$counts/h1$counts,h5$counts/h1$counts),beside=T,
+        names.arg = month.abb[1:12],legend.text = c("FN","FP", "TP"),args.legend=list(x='topright',bty='n'))
 
 breaks=seq(2002.5,2021.5,1)
 h1 <- hist(year(keep$date),breaks=breaks)
