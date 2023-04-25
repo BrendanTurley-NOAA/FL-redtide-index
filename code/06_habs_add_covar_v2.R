@@ -245,6 +245,30 @@ plot(habs_covar_agg$date,habs_covar_agg$CELLCOUNT+1,log='y')
 plot(habs$date,habs$CELLCOUNT+1,log='y')
 
 
+### daily aggregates
+habs_reduce$ygd <- paste(habs_reduce$year,habs_reduce$yday,habs_reduce$lon_m,habs_reduce$lat_m)
+habs_agg2 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,CELLCOUNT,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygd,
+                      data=habs_reduce,mean,na.rm=T)
+habs_agg2$date <- as.Date(habs_agg2$yday-1,origin=paste0(habs_agg2$year,'-01-01'))
+### create binary classifier
+habs_agg2$pa100k <- ifelse(habs_agg2$CELLCOUNT>=1e5,1,0)
+### assign to grid
+habs_agg2$lon_m <- cut(habs_agg2$LONGITUDE,vec_brk(lon_modis))
+habs_agg2$lat_m <- cut(habs_agg2$LATITUDE,vec_brk(lat_modis))
+### add bathymetry
+habs_covar_agg1.2 <- merge(habs_agg2,bathy[,-c(1,2)],by=c('lon_m','lat_m'),all.x=T) # don't include superfluous lon/lats
+### remove shallow water samples
+# habs_covar_agg <- habs_covar_agg[-which(habs_covar_agg$depth_m>2),] # remove samples taken at altitude greater than 2 m
+# updated 2023/03/28 to remove shallow water samples; remove samples taken at locations with depth greater than 200 m
+habs_covar_agg1.3 <- habs_covar_agg1.2[-which(habs_covar_agg1.2$depth_m>(-1) |
+                                             habs_covar_agg1.2$depth_m<(-200)),]
+habs_covar_agg2.2 <- habs_covar_agg1.2[-which(habs_covar_agg1.2$depth_m>(-2) |
+                                             habs_covar_agg1.2$depth_m<(-200)),]
+habs_covar_agg3.2 <- habs_covar_agg1.2[-which(habs_covar_agg1.2$depth_m>(-3) |
+                                             habs_covar_agg1.2$depth_m<(-200)),]
+habs_covar_agg4.2 <- habs_covar_agg1.2[-which(habs_covar_agg1.2$depth_m>(-5) |
+                                             habs_covar_agg1.2$depth_m<(-200)),]
+
 ### alternative; does change pa100k values
 habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygm,
                          data=habs_reduce,mean,na.rm=T)
