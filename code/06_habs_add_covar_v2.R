@@ -273,9 +273,9 @@ habs_covar_agg4.2 <- habs_covar_agg1.2[-which(habs_covar_agg1.2$depth_m>(-5) |
 habs_agg2.1 <- aggregate(cbind(LATITUDE,LONGITUDE,SAMPLE_DEPTH,date,chlor_a,chl_anom,nflh,nflh_anom,rrs_667,ssnlw488,carder_bbp,morel_bbp,cm_bbp,abi,rbd,kbbi,sst,year,month,yday,week)~ygm,
                          data=habs_reduce,mean,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,max,na.rm=T)
-habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,quantile,.9,na.rm=T)
+habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,quantile,.95,na.rm=T)
 habs_agg2.2 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,
-                         function(x){if(length(x)<3){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
+                         function(x){if(length(x)<=3){mean(x,na.rm=T)}else{mean(x[which(x>quantile(x,.9,na.rm=T))],na.rm=T)}})
 habs_agg2.3 <- aggregate(CELLCOUNT~ygm,data=habs_reduce,length)
 habs_agg2 <- merge(habs_agg2.1,habs_agg2.2,by=c('ygm'),all.x=T)
 habs_agg2$date <- as.Date(habs_agg2$yday-1,origin=paste0(habs_agg2$year,'-01-01'))
@@ -297,10 +297,13 @@ test <- na.omit(habs_covar_agg2)
 dim(test)==dim(habs_covar_agg2) ### should be true
 
 par(mfrow=c(3,1))
-plot(habs_covar_agg$date,habs_covar_agg$CELLCOUNT+1,log='y')
+plot(habs_covar_agg1$date,habs_covar_agg1$CELLCOUNT+1,log='y')
 plot(habs_covar_agg2$date,habs_covar_agg2$CELLCOUNT+1,log='y')
 plot(habs$date,habs$CELLCOUNT+1,log='y')
 
-length(which(habs_covar_agg$pa100k==1))
+length(which(habs_covar_agg1$pa100k==1))
 length(which(habs_covar_agg2$pa100k==1))
+
+length(which(habs_covar_agg1$pa100k==0))
+length(which(habs_covar_agg2$pa100k==0))
 
